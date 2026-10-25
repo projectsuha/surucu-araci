@@ -32,7 +32,7 @@ jobs:
         run: derle.bat
 
       - name: Derlenen dosyaları sakla
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: SurucuAraci
           path: |
