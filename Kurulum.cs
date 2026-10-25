@@ -158,9 +158,12 @@ namespace SurucuAraci
             using (FileStream dosya = File.Create(hedef))
                 kaynak.CopyTo(dosya);
 
-            // Onceki kurulumdan kalan, diger dildeki kisayollar temizlenir
+            // Onceki kurulumdan kalan, diger dildeki kisayollar temizlenir; masaustunde kisayol varsa yenisi olusturulur
+            string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             foreach (string eski in Ortak.TumKisayollar())
             {
+                if (!File.Exists(eski)) continue;
+                if (eski.StartsWith(masaustu, StringComparison.OrdinalIgnoreCase)) masaustuKisayolu = true;
                 try { File.Delete(eski); } catch (Exception) { }
             }
             Kisayol(Ortak.BaslatKisayolu, hedef);

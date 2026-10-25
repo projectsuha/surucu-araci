@@ -69,7 +69,21 @@ namespace SurucuAraci
             };
             Tam(duzen, not);
 
-            Bolum(duzen, string.Format(M("Program (sürüm {0})", "Program (version {0})"), Ortak.Surum));
+            if (Ortak.KendiniGuncelle)
+            {
+                Bolum(duzen, string.Format(M("Program (sürüm {0})", "Program (version {0})"), Ortak.Surum));
+            }
+            else
+            {
+                // Guncelleme secenekleri kapaliyken yalnizca surum bilgisi gosterilir
+                Tam(duzen, new Label
+                {
+                    Text = string.Format(M("{0} · sürüm {1}", "{0} · version {1}"), Ortak.Ad, Ortak.Surum),
+                    AutoSize = true,
+                    ForeColor = Tema.Soluk,
+                    Margin = new Padding(0, O(14), 0, 0)
+                });
+            }
             programGuncellemesi = Onay(M("Yeni sürümleri otomatik denetle (GitHub)", "Check for new versions automatically (GitHub)"), Ayarlar.ProgramGuncellemesi);
             if (Ortak.KendiniGuncelle) Tam(duzen, programGuncellemesi);
             var simdiDenetle = new Dugme(M("Şimdi denetle", "Check now"), "\uE72C", DugmeTuru.Arac, Font) { Margin = new Padding(0, O(4), 0, O(4)) };

@@ -1,6 +1,2 @@
 # Derlenen programlar depoya degil, GitHub Releases sayfasina konur
 *.exe
-
-# Ilk PowerShell surumu; yerini SurucuAraci.exe aldi
-SurucuAraci.ps1
-SurucuAraci.bat
