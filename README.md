@@ -36,7 +36,6 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 - **Sürücü yedekleme** – tüm sürücüleri yedekler; Windows'u yeniden kurunca klasörden geri yükler
 - **İşlem geçmişi** – hangi sürücünün ne zaman neyle değiştiğini kaydeder
 - **Ayrıntı paneli, arama, HTML rapor**
-- **Kendi kendini güncelleme** – yeni sürüm çıkınca haber verir, GitHub'dan indirip doğrulayarak kurar
 - **Açık / koyu tema**, **Türkçe / İngilizce**
 
 ![Bakım sekmesi, koyu tema](docs/ekran-bakim-koyu.png)
@@ -84,7 +83,10 @@ GitHub Actions her gönderide programı derler. Yeni sürüm için:
 1. `Ortak.cs` içindeki `Surum` değerini artırın (örneğin `2.2`) ve `surum-notlari.md` dosyasını güncelleyin.
 2. Aynı numarayla bir etiket gönderin: `git tag v2.2` ve `git push origin v2.2`.
 
-Actions programı derler ve Releases sayfasında yayınlar; programı kullananlara yeni sürüm otomatik haber verilir.
+Actions programı derler ve Releases sayfasında yayınlar.
+
+Programın kendi kendini güncellemesi (`Guncelleyici.cs`) depo gizli olduğu için kapalıdır; depo herkese açık yapılırsa
+`Ortak.cs` içindeki `KendiniGuncelle` değerini `true` yapmak yeterlidir.
 
 ## Lisans
 

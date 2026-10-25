@@ -1293,7 +1293,8 @@ namespace SurucuAraci
         // elle: kullanici istedi; sonuc her durumda bildirilir. Otomatikte gunde en fazla bir kez denetlenir.
         void ProgramGuncellemesiniDenetle(bool elle)
         {
-            if (!elle && (!Ayarlar.ProgramGuncellemesi || DateTime.Now - Ayarlar.SonProgramDenetimi < TimeSpan.FromDays(1))) return;
+            if (!Ortak.KendiniGuncelle) return;
+            if (!elle &&(!Ayarlar.ProgramGuncellemesi || DateTime.Now - Ayarlar.SonProgramDenetimi < TimeSpan.FromDays(1))) return;
             Task.Factory.StartNew(() => Guncelleyici.YeniSurumuDenetle()).ContinueWith(t => BeginInvoke(new Action(() =>
             {
                 if (t.IsFaulted)
