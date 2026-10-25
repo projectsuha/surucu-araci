@@ -1,0 +1,49 @@
+# Her gonderide programi derler; "v" ile baslayan bir etiket (v2.1 gibi) gonderilince surumu yayinlar.
+# Surum notlari surum-notlari.md dosyasindan alinir; program yeni surumu haber verirken bu notlari gosterir.
+name: Derle ve yayınla
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  derle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sürüm numarasını denetle
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $surum = (Select-String -Path Ortak.cs -Pattern 'Surum = "([0-9.]+)"').Matches[0].Groups[1].Value
+          if ("v$surum" -ne "${{ github.ref_name }}") {
+            throw "Ortak.cs içindeki sürüm ($surum) etiketle (${{ github.ref_name }}) aynı değil."
+          }
+
+      - name: Derle
+        shell: cmd
+        run: derle.bat
+
+      - name: Derlenen dosyaları sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: SurucuAraci
+          path: |
+            SurucuAraci.exe
+            SurucuAraciKurulum.exe
+
+      - name: Sürümü yayınla
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" SurucuAraciKurulum.exe SurucuAraci.exe `
+            --title "Sürücü Aracı ${{ github.ref_name }}" --notes-file surum-notlari.md

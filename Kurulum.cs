@@ -73,8 +73,8 @@ namespace SurucuAraci
             calistir = Onay(govde, M("Kurulum bitince programı aç", "Open the program when setup finishes"), true);
 
             var butonlar = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(O(20), O(10), O(20), O(18)), BackColor = Tema.Zemin };
-            btnKur = new Dugme(M("Kur", "Install"), "", DugmeTuru.Birincil, new Font("Segoe UI Semibold", 10.5f)) { Margin = new Padding(O(8), 0, 0, 0) };
-            btnIptal = new Dugme(M("İptal", "Cancel"), "", DugmeTuru.Arac, Font);
+            btnKur = new Dugme(M("Kur", "Install"), "\uE896", DugmeTuru.Birincil, new Font("Segoe UI Semibold", 10.5f)) { Margin = new Padding(O(8), 0, 0, 0) };
+            btnIptal = new Dugme(M("İptal", "Cancel"), "\uE711", DugmeTuru.Arac, Font);
             btnKur.Click += (s, e) => Kur();
             btnIptal.Click += (s, e) => Close();
             butonlar.Controls.Add(btnKur);
@@ -116,61 +116,15 @@ namespace SurucuAraci
 
         void Kur()
         {
-            Process[] calisanlar = Process.GetProcessesByName("SurucuAraci");
-            if (calisanlar.Length > 0)
-            {
-                if (MessageBox.Show(this, M("Sürücü Aracı şu an açık. Kuruluma devam etmek için kapatılsın mı?", "Driver Tool is currently running. Close it to continue setup?"),
-                        Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-                foreach (Process p in calisanlar)
-                {
-                    try
-                    {
-                        p.Kill();
-                        p.WaitForExit(5000);
-                    }
-                    catch (Exception) { }
-                }
-            }
+            if (Process.GetProcessesByName("SurucuAraci").Length > 0 &&
+                MessageBox.Show(this, M("Sürücü Aracı şu an açık. Kuruluma devam etmek için kapatılsın mı?", "Driver Tool is currently running. Close it to continue setup?"),
+                    Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             btnKur.Enabled = btnIptal.Enabled = false;
             UseWaitCursor = true;
             try
             {
-                Directory.CreateDirectory(Ortak.KurulumKlasoru);
-                string hedef = Path.Combine(Ortak.KurulumKlasoru, "SurucuAraci.exe");
-                using (Stream kaynak = typeof(KurulumFormu).Assembly.GetManifestResourceStream("SurucuAraci.Uygulama.exe"))
-                using (FileStream dosya = File.Create(hedef))
-                    kaynak.CopyTo(dosya);
-
-                // Onceki kurulumdan kalan, diger dildeki kisayollar temizlenir
-                foreach (string eski in Ortak.TumKisayollar())
-                {
-                    try { File.Delete(eski); } catch (Exception) { }
-                }
-                Kisayol(Ortak.BaslatKisayolu, hedef);
-                if (masaustu.Checked) Kisayol(Ortak.MasaustuKisayolu, hedef);
-
-                // Ayarlar > Uygulamalar listesinde gorunmesi icin
-                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Ortak.KaldirmaAnahtari))
-                {
-                    k.SetValue("DisplayName", Ortak.Ad);
-                    k.SetValue("DisplayVersion", Ortak.Surum);
-                    k.SetValue("DisplayIcon", hedef);
-                    k.SetValue("Publisher", Ortak.Ad);
-                    k.SetValue("InstallLocation", Ortak.KurulumKlasoru);
-                    k.SetValue("UninstallString", "\"" + hedef + "\" /kaldir");
-                    k.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));
-                    k.SetValue("EstimatedSize", (int)(new FileInfo(hedef).Length / 1024), RegistryValueKind.DWord);
-                    k.SetValue("NoModify", 1, RegistryValueKind.DWord);
-                    k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-                }
-
-                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Ortak.BaslangicAnahtari))
-                {
-                    if (baslangic.Checked) k.SetValue(Ortak.BaslangicDegeri, "\"" + hedef + "\" /tepsi");
-                    else k.DeleteValue(Ortak.BaslangicDegeri, false);
-                }
-
+                string hedef = KurulumYap(masaustu.Checked, baslangic.Checked);
                 UseWaitCursor = false;
                 MessageBox.Show(this, M("Kurulum tamamlandı. Programı Başlat menüsünden açabilirsiniz.", "Setup complete. You can open the program from the Start menu."),
                     Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -184,22 +138,88 @@ namespace SurucuAraci
                 MessageBox.Show(this, M("Kurulum tamamlanamadı:\n\n", "Setup failed:\n\n") + hata.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Calisan programi kapatir, dosyayi kopyalar, kisayollari ve Uygulamalar kaydini olusturur; kurulan exe'nin yolunu doner
+        public static string KurulumYap(bool masaustuKisayolu, bool windowsIleBaslat)
+        {
+            foreach (Process p in Process.GetProcessesByName("SurucuAraci"))
+            {
+                try
+                {
+                    p.Kill();
+                    p.WaitForExit(5000);
+                }
+                catch (Exception) { }
+            }
+
+            Directory.CreateDirectory(Ortak.KurulumKlasoru);
+            string hedef = Path.Combine(Ortak.KurulumKlasoru, "SurucuAraci.exe");
+            using (Stream kaynak = typeof(KurulumFormu).Assembly.GetManifestResourceStream("SurucuAraci.Uygulama.exe"))
+            using (FileStream dosya = File.Create(hedef))
+                kaynak.CopyTo(dosya);
+
+            // Onceki kurulumdan kalan, diger dildeki kisayollar temizlenir
+            foreach (string eski in Ortak.TumKisayollar())
+            {
+                try { File.Delete(eski); } catch (Exception) { }
+            }
+            Kisayol(Ortak.BaslatKisayolu, hedef);
+            if (masaustuKisayolu) Kisayol(Ortak.MasaustuKisayolu, hedef);
+
+            // Ayarlar > Uygulamalar listesinde gorunmesi icin; QuietUninstallString winget'in sessiz kaldirmasi icindir
+            using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Ortak.KaldirmaAnahtari))
+            {
+                k.SetValue("DisplayName", Ortak.Ad);
+                k.SetValue("DisplayVersion", Ortak.Surum);
+                k.SetValue("DisplayIcon", hedef);
+                k.SetValue("Publisher", "projectsuha");
+                k.SetValue("InstallLocation", Ortak.KurulumKlasoru);
+                k.SetValue("UninstallString", "\"" + hedef + "\" /kaldir");
+                k.SetValue("QuietUninstallString", "\"" + hedef + "\" /kaldir /sessiz");
+                k.SetValue("URLInfoAbout", "https://github.com/" + Ortak.Depo);
+                k.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));
+                k.SetValue("EstimatedSize", (int)(new FileInfo(hedef).Length / 1024), RegistryValueKind.DWord);
+                k.SetValue("NoModify", 1, RegistryValueKind.DWord);
+                k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+            }
+
+            using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Ortak.BaslangicAnahtari))
+            {
+                if (windowsIleBaslat) k.SetValue(Ortak.BaslangicDegeri, "\"" + hedef + "\" /tepsi");
+                else k.DeleteValue(Ortak.BaslangicDegeri, false);
+            }
+            return hedef;
+        }
     }
 
+    // /sessiz (veya /S, /silent): pencere acmadan kurar, cikis kodu 0 basari, 1 hata (winget icin)
     static class KurulumProgrami
     {
         [DllImport("user32.dll")]
         static extern bool SetProcessDPIAware();
 
         [STAThread]
-        static void Main()
+        static int Main(string[] args)
         {
+            Dil.Ayarla("sistem");
+            if (args.Any(a => new[] { "/sessiz", "/s", "/silent" }.Contains(a.ToLowerInvariant())))
+            {
+                try
+                {
+                    KurulumFormu.KurulumYap(false, false);
+                    return 0;
+                }
+                catch (Exception)
+                {
+                    return 1;
+                }
+            }
             SetProcessDPIAware();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Dil.Ayarla("sistem");
             Tema.Uygula("sistem");
             Application.Run(new KurulumFormu());
+            return 0;
         }
     }
 }

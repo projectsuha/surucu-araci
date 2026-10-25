@@ -12,7 +12,7 @@ namespace SurucuAraci
     {
         static readonly string Dosya = Path.Combine(Ortak.VeriKlasoru, "ayarlar.txt");
         static readonly Dictionary<string, string> degerler = new Dictionary<string, string>();
-        public static bool SadeceBellek;  // true ise degisiklikler diske yazilmaz
+        public static bool SadeceBellek = false;  // true ise degisiklikler diske yazilmaz (onizleme ve testler)
 
         public static void Yukle()
         {
@@ -70,8 +70,23 @@ namespace SurucuAraci
 
         public static DateTime SonKontrol
         {
-            get { long t; return long.TryParse(Al("sonkontrol", "0"), out t) ? new DateTime(t) : DateTime.MinValue; }
+            get { return Tarih("sonkontrol"); }
             set { Yaz("sonkontrol", value.Ticks.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        // Programin kendi yeni surumunu GitHub'dan denetleme
+        public static bool ProgramGuncellemesi { get { return Al("programguncelleme", "1") == "1"; } set { Yaz("programguncelleme", value ? "1" : "0"); } }
+
+        public static DateTime SonProgramDenetimi
+        {
+            get { return Tarih("sonprogramdenetimi"); }
+            set { Yaz("sonprogramdenetimi", value.Ticks.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        static DateTime Tarih(string ad)
+        {
+            long t;
+            return long.TryParse(Al(ad, "0"), out t) ? new DateTime(t) : DateTime.MinValue;
         }
     }
 

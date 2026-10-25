@@ -7,7 +7,9 @@ namespace SurucuAraci
 {
     static class Ortak
     {
-        public const string Surum = "2.0";
+        // Yeni surum yayinlarken bu sayi ile git etiketi (v2.1 gibi) ayni olmalidir
+        public const string Surum = "2.1";
+        public const string Depo = "projectsuha/surucu-araci";
         public const string KaldirmaAnahtari = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\SurucuAraci";
         public const string BaslangicAnahtari = @"Software\Microsoft\Windows\CurrentVersion\Run";
         public const string BaslangicDegeri = "SurucuAraci";

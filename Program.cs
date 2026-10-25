@@ -1,7 +1,7 @@
 // Program.cs - Baslangic noktasi: tek kopya calisma, sistem tepsisinde baslama ve kaldirma
 //   /tepsi   Windows acilisinda pencere acmadan sistem tepsisinde baslar
 //   /devral  Calisan kopyanin kapanmasini bekleyip yerine gecer (yonetici olarak yeniden baslatma)
-//   /kaldir  Programi kaldirir (Ayarlar > Uygulamalar listesinden cagrilir)
+//   /kaldir  Programi kaldirir (Ayarlar > Uygulamalar listesinden cagrilir); /sessiz ile soru sormadan
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -29,11 +29,12 @@ namespace SurucuAraci
             Ayarlar.Yukle();
             Dil.Ayarla(Ayarlar.DilSecimi);
             Tema.Uygula(Ayarlar.TemaSecimi);
+            Guncelleyici.Toparla();
 
             string[] secenekler = args.Select(a => a.ToLowerInvariant()).ToArray();
             if (secenekler.Contains("/kaldir"))
             {
-                Kaldirici.Calistir();
+                Kaldirici.Calistir(secenekler.Contains("/sessiz"));
                 return;
             }
             bool gizli = secenekler.Contains("/tepsi");
@@ -134,9 +135,10 @@ namespace SurucuAraci
 
     static class Kaldirici
     {
-        public static void Calistir()
+        // sessiz: winget gibi araclar icin; soru sorulmaz, ayarlar ve gecmis korunur
+        public static void Calistir(bool sessiz)
         {
-            if (MessageBox.Show(Dil.M("Sürücü Aracı bilgisayarınızdan kaldırılsın mı?", "Remove Driver Tool from your PC?"), Ortak.Ad,
+            if (!sessiz && MessageBox.Show(Dil.M("Sürücü Aracı bilgisayarınızdan kaldırılsın mı?", "Remove Driver Tool from your PC?"), Ortak.Ad,
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             // Calisan kopyalari kapat
@@ -163,7 +165,7 @@ namespace SurucuAraci
                 try { File.Delete(kisayol); } catch (Exception) { }
             }
 
-            if (MessageBox.Show(Dil.M("Ayarlar ve işlem geçmişi de silinsin mi?\n\n(Belgeler klasöründeki sürücü yedekleri silinmez.)",
+            if (!sessiz && MessageBox.Show(Dil.M("Ayarlar ve işlem geçmişi de silinsin mi?\n\n(Belgeler klasöründeki sürücü yedekleri silinmez.)",
                                       "Also delete the settings and action history?\n\n(Driver backups in your Documents folder are kept.)"),
                     Ortak.Ad, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
@@ -181,7 +183,7 @@ namespace SurucuAraci
                     WorkingDirectory = Path.GetTempPath()  // silinecek klasorun icinde durmasin
                 });
             }
-            MessageBox.Show(Dil.M("Sürücü Aracı kaldırıldı.", "Driver Tool has been removed."), Ortak.Ad, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (!sessiz) MessageBox.Show(Dil.M("Sürücü Aracı kaldırıldı.", "Driver Tool has been removed."), Ortak.Ad, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

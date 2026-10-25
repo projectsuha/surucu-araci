@@ -63,6 +63,19 @@ namespace SurucuAraci
         public DateTime Tarih;
     }
 
+    // Sistem Sagligi sekmesindeki bir satir; Grup listede baslik olarak gosterilir
+    class SaglikSatiri
+    {
+        public string Grup, Ad, Deger, Not = "";
+        public string SimgeAnahtari = "bilgi";
+    }
+
+    class SurumBilgisi
+    {
+        public Version Surum;
+        public string Etiket, Notlar, IndirmeAdresi, Sha256;
+    }
+
     class GecmisKaydi
     {
         public DateTime Tarih;

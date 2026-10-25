@@ -25,6 +25,8 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 
 - **Tek tıkla tarama** – sorunlu aygıtlar, güncellemesi olan sürücüler ve tüm aygıtlar tek listede
 - **Güvenli güncelleme** – kurmadan önce otomatik sistem geri yükleme noktası ve eski sürücülerin yedeği
+- **Aygıt onarımı** – sorunlu aygıtı yeniden başlatır, sürücüsünü yeniden yükler veya etkinleştirir
+- **Sistem sağlığı** – pil ve disk sağlığı, donanım özeti, mavi ekran ve beklenmedik kapanma geçmişi
 - **Arka planda kontrol** – sistem tepsisinde çalışır, günlük veya haftalık kontrol eder, güncelleme bulunca bildirim gösterir
 - **Güncellemeyi gizle** – istemediğiniz bir güncellemeyi gizler; Windows Update de onu otomatik kurmaz
 - **Microsoft Update Kataloğu** – sürücüsü bulunamayan aygıtları donanım kimliğiyle Microsoft'un arşivinde arar
@@ -34,6 +36,7 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 - **Sürücü yedekleme** – tüm sürücüleri yedekler; Windows'u yeniden kurunca klasörden geri yükler
 - **İşlem geçmişi** – hangi sürücünün ne zaman neyle değiştiğini kaydeder
 - **Ayrıntı paneli, arama, HTML rapor**
+- **Kendi kendini güncelleme** – yeni sürüm çıkınca haber verir, GitHub'dan indirip doğrulayarak kurar
 - **Açık / koyu tema**, **Türkçe / İngilizce**
 
 ![Bakım sekmesi, koyu tema](docs/ekran-bakim-koyu.png)
@@ -45,6 +48,7 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 3. Kaldırmak için: **Ayarlar → Uygulamalar → Sürücü Aracı → Kaldır**.
 
 Kurulum istemiyorsanız **SurucuAraci.exe** dosyasını indirip doğrudan çalıştırabilirsiniz.
+Sessiz kurulum için: `SurucuAraciKurulum.exe /sessiz`
 
 > Program dijital olarak imzalı olmadığı için ilk açılışta *"Windows bilgisayarınızı korudu"* uyarısı çıkabilir.
 > **Ek bilgi → Yine de çalıştır** ile açabilirsiniz. Kaynak kodun tamamı bu depodadır.
@@ -67,10 +71,20 @@ derle.bat
 | `Program.cs` | Başlangıç, tek kopya çalışma, kaldırma |
 | `AnaForm.cs` | Ana pencere, sekmeler, sistem tepsisi |
 | `AyarlarFormu.cs` | Ayarlar penceresi |
-| `Sistem.cs` | Tarama, Windows Update, yedekleme, temizlik, geri yükleme |
+| `Sistem.cs` | Tarama, Windows Update, yedekleme, temizlik, geri yükleme, onarım, sistem sağlığı |
+| `Guncelleyici.cs` | Programın kendi yeni sürümünü denetleme ve kurma |
 | `Veri.cs` | Ayarlar ve işlem geçmişi |
 | `Gorunum.cs` | Tema ve özel çizilen kontroller |
 | `Kurulum.cs` | Kurulum programı |
+
+### Yeni sürüm yayınlama
+
+GitHub Actions her gönderide programı derler. Yeni sürüm için:
+
+1. `Ortak.cs` içindeki `Surum` değerini artırın (örneğin `2.2`) ve `surum-notlari.md` dosyasını güncelleyin.
+2. Aynı numarayla bir etiket gönderin: `git tag v2.2` ve `git push origin v2.2`.
+
+Actions programı derler ve Releases sayfasında yayınlar; programı kullananlara yeni sürüm otomatik haber verilir.
 
 ## Lisans
 
@@ -86,14 +100,15 @@ derle.bat
 Windows Update, the Microsoft Update Catalog and hardware manufacturers' own sites. No ads, no bundled software,
 no drivers from unknown archives.
 
-**Features:** one-click scan · safe updates with an automatic restore point and driver backup · background checks with
+**Features:** one-click scan · safe updates with an automatic restore point and driver backup · device repair (restart,
+reinstall driver, enable) · system health (battery, disks, blue screen history) · self-update from GitHub · background checks with
 notifications from the system tray · hide unwanted updates (Windows Update won't install them either) · Microsoft
 Update Catalog search by hardware ID · manufacturer tools (NVIDIA, AMD, Intel, PC maker) · old driver cleanup ·
 restore point management · driver backup and restore · action history · details panel, search, HTML report ·
 light/dark theme · Turkish/English.
 
 **Install:** download **SurucuAraciKurulum.exe** from [Releases](../../releases/latest) and press *Install* (no admin
-rights needed). Uninstall from *Settings → Apps*. Requires Windows 10 or 11. The language can be changed in the
+rights needed; `/sessiz` for a silent install). Uninstall from *Settings → Apps*. Requires Windows 10 or 11. The language can be changed in the
 program's settings.
 
 **Build:** run `derle.bat`; it uses the C# compiler that ships with Windows.

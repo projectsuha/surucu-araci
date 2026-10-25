@@ -16,7 +16,7 @@ using System.Windows.Forms;
 
 namespace SurucuAraci
 {
-    enum Gorunum { Tarama, Gizlenenler, Uretici, Gecmis, Bakim, GeriYukleme }
+    enum Gorunum { Tarama, Gizlenenler, Uretici, Saglik, Gecmis, Bakim, GeriYukleme }
 
     class AnaForm : Form
     {
@@ -40,8 +40,8 @@ namespace SurucuAraci
         readonly Control[] zeminKontrolleri;
         readonly Panel cerceve;
         readonly FlowLayoutPanel araclar;
-        readonly Dugme btnAyarlar, btnTara, btnGuncelle;
-        readonly Dugme btnKatalog, btnGizle, btnGizlenenler, btnTaramayaDon, btnTekrarGoster, btnAc, btnAracKur, btnGecmisiSil;
+        readonly Dugme btnYeniSurum, btnAyarlar, btnTara, btnGuncelle;
+        readonly Dugme btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnTaramayaDon, btnTekrarGoster, btnAc, btnAracKur, btnSaglikYenile, btnGecmisiSil;
         readonly Dugme btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor;
         readonly Dictionary<Gorunum, Dugme> sekmeler = new Dictionary<Gorunum, Dugme>();
         readonly Dictionary<Gorunum, Dugme[]> gorunumAraclari = new Dictionary<Gorunum, Dugme[]>();
@@ -52,6 +52,8 @@ namespace SurucuAraci
         Gorunum gorunum = Gorunum.Tarama;
         bool mesgul, cikiliyor, taramaBasladi;
         List<Aygit> aygitlar = new List<Aygit>();
+        List<Guncelleme> sonGuncellemeler = new List<Guncelleme>();
+        SurumBilgisi yeniSurum;
         bool guncellemelerArandi;
         string guncellemeHatasi;
         DateTime sonTarama;
@@ -80,10 +82,10 @@ namespace SurucuAraci
 
             // ----- Ust bant: logo, ozet ve ana butonlar -----
             var ustBant = new GradyanPanel { Dock = DockStyle.Top, Height = O(118), Padding = new Padding(O(26), O(16), O(26), O(16)) };
-            var ustDuzen = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, RowCount = 1, BackColor = Color.Transparent };
+            var ustDuzen = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6, RowCount = 1, BackColor = Color.Transparent };
             ustDuzen.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             ustDuzen.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            for (int i = 0; i < 3; i++) ustDuzen.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            for (int i = 0; i < 4; i++) ustDuzen.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             ustDuzen.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             var logoKutusu = new PictureBox
@@ -105,7 +107,10 @@ namespace SurucuAraci
             metinler.Controls.Add(altBilgi, 0, 2);
 
             var buyukYazi = new Font("Segoe UI Semibold", 11f);
-            btnAyarlar = new Dugme("", "\uE713", DugmeTuru.Seffaf, buyukYazi) { Anchor = AnchorStyles.None, Margin = new Padding(O(10), 0, 0, 0), AccessibleName = M("Ayarlar", "Settings") };
+            // Programin yeni surumu varsa gorunur
+            btnYeniSurum = new Dugme("", "\uE896", DugmeTuru.Seffaf, new Font("Segoe UI Semibold", 9.75f)) { Anchor = AnchorStyles.None, Margin = new Padding(O(10), 0, 0, 0), Visible = false };
+            btnYeniSurum.Click += (s, e) => YeniSurumuGoster();
+            btnAyarlar =new Dugme("", "\uE713", DugmeTuru.Seffaf, buyukYazi) { Anchor = AnchorStyles.None, Margin = new Padding(O(10), 0, 0, 0), AccessibleName = M("Ayarlar", "Settings") };
             btnAyarlar.Click += (s, e) => AyarlariAc();
             new ToolTip().SetToolTip(btnAyarlar, M("Ayarlar", "Settings"));
             btnTara = new Dugme(M("Tara", "Scan"), "\uE72C", DugmeTuru.Seffaf, buyukYazi) { Anchor = AnchorStyles.None, Margin = new Padding(O(10), 0, 0, 0) };
@@ -115,9 +120,10 @@ namespace SurucuAraci
 
             ustDuzen.Controls.Add(logoKutusu, 0, 0);
             ustDuzen.Controls.Add(metinler, 1, 0);
-            ustDuzen.Controls.Add(btnAyarlar, 2, 0);
-            ustDuzen.Controls.Add(btnTara, 3, 0);
-            ustDuzen.Controls.Add(btnGuncelle, 4, 0);
+            ustDuzen.Controls.Add(btnYeniSurum, 2, 0);
+            ustDuzen.Controls.Add(btnAyarlar, 3, 0);
+            ustDuzen.Controls.Add(btnTara, 4, 0);
+            ustDuzen.Controls.Add(btnGuncelle, 5, 0);
             ustBant.Controls.Add(ustDuzen);
 
             // ----- Ozet kartlari -----
@@ -141,7 +147,8 @@ namespace SurucuAraci
             var sekmeAkisi = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
             Sekme(sekmeAkisi, Gorunum.Tarama, M("Tarama", "Scan"), "\uE721");
             Sekme(sekmeAkisi, Gorunum.Uretici, M("Üretici Kaynakları", "Manufacturer Sources"), "\uE8F1");
-            Sekme(sekmeAkisi, Gorunum.Gecmis, M("Geçmiş", "History"), "\uE81C");
+            Sekme(sekmeAkisi, Gorunum.Saglik, M("Sistem Sağlığı", "System Health"), "\uE95E");
+            Sekme(sekmeAkisi, Gorunum.Gecmis, M("Geçmiş", "History"),"\uE81C");
             Sekme(sekmeAkisi, Gorunum.Bakim, M("Bakım", "Maintenance"), "\uE90F");
             Sekme(sekmeAkisi, Gorunum.GeriYukleme, M("Geri Yükleme", "System Restore"), "\uE777");
             arama.Width = O(240);
@@ -160,6 +167,8 @@ namespace SurucuAraci
             aracSatiri.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             araclar = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty };
             btnKatalog = Arac(M("Katalogda Ara", "Search Catalog"), "\uE774", KatalogdaAra);
+            btnOnar = Arac(M("Onar", "Repair"), "\uE90F", OnarmaMenusunuAc);
+            btnSaglikYenile = Arac(M("Yenile", "Refresh"), "\uE72C", SaglikGoster);
             btnGizle = Arac(M("Güncellemeyi Gizle", "Hide Update"), "\uED1A", GuncellemeyiGizle);
             btnGizlenenler = Arac(M("Gizlenenler", "Hidden Updates"), "\uE890", () => GorunumuDegistir(Gorunum.Gizlenenler));
             btnTaramayaDon = Arac(M("Tarama Sonuçlarına Dön", "Back to Scan Results"), "\uE72B", () => GorunumuDegistir(Gorunum.Tarama));
@@ -177,9 +186,10 @@ namespace SurucuAraci
             btnSistemGeriYukleme = Arac(M("Windows Sistem Geri Yükleme", "Windows System Restore"), "\uE8A7", SistemGeriYuklemeyiAc);
             btnRapor = Arac(M("Rapor Kaydet", "Save Report"), "\uE8A5", RaporKaydet);
 
-            gorunumAraclari[Gorunum.Tarama] = new[] { btnKatalog, btnGizle, btnGizlenenler, btnRapor };
+            gorunumAraclari[Gorunum.Tarama] = new[] { btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnRapor };
             gorunumAraclari[Gorunum.Gizlenenler] = new[] { btnTaramayaDon, btnTekrarGoster, btnRapor };
             gorunumAraclari[Gorunum.Uretici] = new[] { btnAc, btnAracKur, btnRapor };
+            gorunumAraclari[Gorunum.Saglik] = new[] { btnSaglikYenile, btnYonetici, btnRapor };
             gorunumAraclari[Gorunum.Gecmis] = new[] { btnGecmisiSil, btnRapor };
             gorunumAraclari[Gorunum.Bakim] = new[] { btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnRapor };
             gorunumAraclari[Gorunum.GeriYukleme] = new[] { btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor };
@@ -251,12 +261,16 @@ namespace SurucuAraci
 
             TepsiyiHazirla();
             kontrolZamanlayicisi.Interval = 30 * 60 * 1000;
-            kontrolZamanlayicisi.Tick += (s, e) => OtomatikKontrol();
+            kontrolZamanlayicisi.Tick += (s, e) => { OtomatikKontrol(); ProgramGuncellemesiniDenetle(false); };
             kontrolZamanlayicisi.Start();
             // Windows acilisinda gizli baslarsa ilk kontrol yarim dakika sonra yapilir
             var ilkKontrol = new Timer { Interval = 30000 };
             ilkKontrol.Tick += (s, e) => { ilkKontrol.Stop(); ilkKontrol.Dispose(); if (!taramaBasladi) OtomatikKontrol(); };
             ilkKontrol.Start();
+            // Programin yeni surumu acilistan biraz sonra denetlenir
+            var surumKontrolu = new Timer { Interval = 15000 };
+            surumKontrolu.Tick += (s, e) => { surumKontrolu.Stop(); surumKontrolu.Dispose(); ProgramGuncellemesiniDenetle(false); };
+            surumKontrolu.Start();
 
             HandleCreated += (s, e) => Tema.BaslikCubugu(this);
             Shown += (s, e) => { if (!taramaBasladi) Tara(false); };
@@ -539,6 +553,7 @@ namespace SurucuAraci
             Aygit aygit = SeciliEtiket<Aygit>();
             Kaynak kaynak = SeciliEtiket<Kaynak>();
             btnKatalog.Enabled = !mesgul && aygit != null && aygit.DonanimKimlikleri.Length > 0;
+            btnOnar.Enabled = !mesgul && gorunum == Gorunum.Tarama && aygit != null && aygit.Kimlik != "";
             btnGizle.Enabled = btnTekrarGoster.Enabled = !mesgul && aygit != null && aygit.Guncelleme != null;
             btnAc.Enabled = !mesgul && kaynak != null && kaynak.Adres != "";
             btnAracKur.Enabled = !mesgul && kaynak != null && kaynak.WingetId != null && !kaynak.Kurulu;
@@ -546,8 +561,8 @@ namespace SurucuAraci
             btnGeriDon.Enabled = !mesgul && SeciliEtiket<GeriNokta>() != null;
             btnGecmisiSil.Enabled = !mesgul && tumOgeler.Count > 0;
             btnRapor.Enabled = !mesgul && liste.Items.Count > 0;
-            foreach (Dugme d in new[] { btnAyarlar, btnTara, btnGizlenenler, btnTaramayaDon, btnBakimYenile, btnYedekle, btnKlasordenYukle,
-                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme })
+            foreach (Dugme d in new[] { btnYeniSurum, btnAyarlar, btnTara, btnGizlenenler, btnTaramayaDon, btnBakimYenile, btnYedekle, btnKlasordenYukle,
+                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile })
                 d.Enabled = !mesgul;
             foreach (Dugme s in sekmeler.Values) s.Enabled = !mesgul;
             tumunuGoster.Enabled = arama.Enabled = !mesgul;
@@ -578,6 +593,7 @@ namespace SurucuAraci
                 case Gorunum.Tarama: TaramayiGoster(); break;
                 case Gorunum.Gizlenenler: GizlenenleriGoster(); break;
                 case Gorunum.Uretici: UreticiKaynaklariniGoster(); break;
+                case Gorunum.Saglik: SaglikGoster(); break;
                 case Gorunum.Gecmis: GecmisiGoster(); break;
                 case Gorunum.Bakim: EskiSuruculeriGoster(); break;
                 case Gorunum.GeriYukleme: GeriYuklemeNoktalariniGoster(); break;
@@ -604,6 +620,7 @@ namespace SurucuAraci
             {
                 case Gorunum.Gizlenenler: return M("Gizlenen Güncellemeler", "Hidden Updates");
                 case Gorunum.Uretici: return M("Üretici Kaynakları", "Manufacturer Sources");
+                case Gorunum.Saglik: return M("Sistem Sağlığı", "System Health");
                 case Gorunum.Gecmis: return M("İşlem Geçmişi", "Action History");
                 case Gorunum.Bakim: return M("Eski Sürücü Paketleri", "Old Driver Packages");
                 case Gorunum.GeriYukleme: return M("Geri Yükleme Noktaları", "Restore Points");
@@ -635,6 +652,7 @@ namespace SurucuAraci
                     guncellemeHatasi = sonuc.Item2;
                     sonTarama = DateTime.Now;
                     if (guncellemeHatasi == null) Ayarlar.SonKontrol = sonTarama;
+                    sonGuncellemeler = sonuc.Item1;
                     Sistem.Eslestir(aygitlar, sonuc.Item1);
                     if (gorunum == Gorunum.Tarama) TaramayiGoster(); else KartlariGuncelle();
                     if (bildir) Bildir();
@@ -834,6 +852,74 @@ namespace SurucuAraci
                            "Download the newest matching version from the catalog, then install it with \"Install from Folder\" on the Maintenance tab.");
         }
 
+        // ---------- Aygit onarimi ----------
+
+        void OnarmaMenusunuAc()
+        {
+            Aygit a = SeciliEtiket<Aygit>();
+            if (a == null || a.Kimlik == "") return;
+            var menu = new ContextMenuStrip { Renderer = new MenuCizici() };
+            menu.Items.Add(M("Aygıtı yeniden başlat", "Restart device"), null, (s, e) => AygitiOnar(a, "restart"));
+            menu.Items.Add(M("Sürücüyü yeniden yükle", "Reinstall driver"), null, (s, e) => AygitiOnar(a, "reinstall"));
+            menu.Items.Add(new ToolStripSeparator());
+            if (a.HataKodu == 22) menu.Items.Add(M("Aygıtı etkinleştir", "Enable device"), null, (s, e) => AygitiOnar(a, "enable"));
+            else menu.Items.Add(M("Aygıtı devre dışı bırak", "Disable device"), null, (s, e) => AygitiOnar(a, "disable"));
+            menu.Closed += (s, e) => BeginInvoke(new Action(menu.Dispose));
+            menu.Show(btnOnar, new Point(0, btnOnar.Height));
+        }
+
+        static string OnarimAdi(string islem)
+        {
+            switch (islem)
+            {
+                case "restart": return M("Yeniden başlatma", "Restart");
+                case "reinstall": return M("Sürücüyü yeniden yükleme", "Driver reinstall");
+                case "enable": return M("Etkinleştirme", "Enable");
+                default: return M("Devre dışı bırakma", "Disable");
+            }
+        }
+
+        void AygitiOnar(Aygit a, string islem)
+        {
+            if (!YoneticiOl()) return;
+            string aciklama;
+            switch (islem)
+            {
+                case "restart":
+                    aciklama = M("\"{0}\" yeniden başlatılacak. Aygıt birkaç saniye kullanılamaz.", "\"{0}\" will be restarted. The device will be unavailable for a few seconds.");
+                    break;
+                case "reinstall":
+                    aciklama = M("\"{0}\" kaldırılıp Windows tarafından yeniden bulunacak ve sürücüsü yeniden yüklenecek. Aygıt kısa bir süre kullanılamaz; ağ aygıtıysa internet bağlantısı birkaç saniye kesilir.",
+                                 "\"{0}\" will be removed, detected again by Windows and its driver reinstalled. The device will be briefly unavailable; for a network device, the internet connection drops for a few seconds.");
+                    break;
+                case "enable":
+                    aciklama = M("\"{0}\" etkinleştirilecek.", "\"{0}\" will be enabled.");
+                    break;
+                default:
+                    aciklama = M("\"{0}\" devre dışı bırakılacak ve siz yeniden etkinleştirene kadar çalışmayacak.\n\nDikkat: Klavye, fare, ekran veya disk gibi bir aygıtı devre dışı bırakmak bilgisayarı kullanılamaz hale getirebilir.",
+                                 "\"{0}\" will be disabled and won't work until you enable it again.\n\nCaution: disabling a device such as the keyboard, mouse, display or disk can make the PC unusable.");
+                    break;
+            }
+            if (!Sor(string.Format(aciklama, a.Ad) + M("\n\nDevam edilsin mi?", "\n\nContinue?"), islem == "disable" ? MessageBoxIcon.Warning : MessageBoxIcon.Question)) return;
+            Calistir(M("Aygıt üzerinde işlem yapılıyor...", "Working on the device..."), () => Sistem.AygitIslemi(a.Kimlik, islem), sonuc =>
+            {
+                Gecmis.Ekle("onarim", a.Ad, "", OnarimAdi(islem), sonuc.Basarili ? M("Tamamlandı", "Done") : M("Başarısız", "Failed"), sonuc.Basarili);
+                Bilgi(sonuc.Mesaj, sonuc.Basarili);
+                YerelYenile();
+            });
+        }
+
+        // Aygit listesini Windows Update'i yeniden aramadan tazeler
+        void YerelYenile()
+        {
+            Calistir(M("Aygıtlar yeniden taranıyor...", "Rescanning devices..."), Sistem.AygitlariTara, bulunanlar =>
+            {
+                aygitlar = bulunanlar;
+                Sistem.Eslestir(aygitlar, sonGuncellemeler);
+                TaramayiGoster();
+            });
+        }
+
         // ---------- Gizlenen guncellemeler ----------
 
         void GuncellemeyiGizle()
@@ -927,6 +1013,43 @@ namespace SurucuAraci
             });
         }
 
+        // ---------- Sistem sagligi ----------
+
+        void SaglikGoster()
+        {
+            Calistir(M("Donanım bilgileri ve sağlık durumu okunuyor...", "Reading hardware information and health..."), Sistem.SaglikBilgisi, satirlar =>
+            {
+                // Grup basliklari kalin, renkli satirlar olarak eklenir (ListView'in kendi grup basligi koyu temada okunmuyor)
+                var ogeler = new List<ListViewItem>();
+                var baslikYazisi = new Font(liste.Font, FontStyle.Bold);
+                string sonGrup = null;
+                foreach (SaglikSatiri s in satirlar)
+                {
+                    if (s.Grup != sonGrup)
+                    {
+                        ogeler.Add(new ListViewItem(s.Grup) { Font = baslikYazisi, ForeColor = Tema.AracSimge });
+                        sonGrup = s.Grup;
+                    }
+                    var oge = new ListViewItem(new[] { s.Ad, s.Deger, s.Not })
+                    {
+                        Tag = s,
+                        ImageKey = s.SimgeAnahtari,
+                        ToolTipText = s.Not,
+                        UseItemStyleForSubItems = false
+                    };
+                    if (s.SimgeAnahtari == "sorunlu") oge.SubItems[1].ForeColor = Tema.KirmiziYazi;
+                    else if (s.SimgeAnahtari == "guncelleme") oge.SubItems[1].ForeColor = Tema.TuruncuYazi;
+                    else if (s.SimgeAnahtari == "guncel") oge.SubItems[1].ForeColor = Tema.YesilYazi;
+                    ogeler.Add(oge);
+                }
+                ListeyiDoldur(new[] { M("Özellik", "Item"), M("Değer", "Value"), M("Not", "Notes") }, new[] { 240, 380, 400 }, ogeler, false,
+                    M("Sistem bilgileri okunamadı.", "System information couldn't be read."));
+                durum.Text = satirlar.Any(s => s.SimgeAnahtari == "sorunlu") ? M("Kırmızı satırlar dikkat gerektiriyor.", "The red rows need attention.")
+                    : satirlar.Any(s => s.SimgeAnahtari == "guncelleme") ? M("Sarı satırlara göz atmanızı öneririz.", "Have a look at the yellow rows.")
+                    : M("Donanımınız sağlıklı görünüyor.", "Your hardware looks healthy.");
+            });
+        }
+
         // ---------- Gecmis ----------
 
         static string IslemAdi(string kod)
@@ -942,6 +1065,8 @@ namespace SurucuAraci
                 case "nokta": return M("Geri yükleme noktası", "Restore point");
                 case "geriyukleme": return M("Sistem geri yükleme", "System restore");
                 case "yedek": return M("Sürücü yedekleme", "Driver backup");
+                case "onarim": return M("Aygıt onarımı", "Device repair");
+                case "program": return M("Program güncellemesi", "Program update");
                 default: return kod;
             }
         }
@@ -1163,6 +1288,52 @@ namespace SurucuAraci
             catch (Win32Exception) { }  // kullanici UAC penceresinde Hayir dedi
         }
 
+        // ---------- Programin kendi guncellemesi ----------
+
+        // elle: kullanici istedi; sonuc her durumda bildirilir. Otomatikte gunde en fazla bir kez denetlenir.
+        void ProgramGuncellemesiniDenetle(bool elle)
+        {
+            if (!elle && (!Ayarlar.ProgramGuncellemesi || DateTime.Now - Ayarlar.SonProgramDenetimi < TimeSpan.FromDays(1))) return;
+            Task.Factory.StartNew(() => Guncelleyici.YeniSurumuDenetle()).ContinueWith(t => BeginInvoke(new Action(() =>
+            {
+                if (t.IsFaulted)
+                {
+                    if (elle) Bilgi(M("Program güncellemesi denetlenemedi: ", "Couldn't check for a program update: ") + t.Exception.GetBaseException().Message, false);
+                    return;
+                }
+                Ayarlar.SonProgramDenetimi = DateTime.Now;
+                yeniSurum = t.Result;
+                btnYeniSurum.Visible = yeniSurum != null;
+                if (yeniSurum == null)
+                {
+                    if (elle) Bilgi(string.Format(M("Sürücü Aracı güncel (sürüm {0}).", "Driver Tool is up to date (version {0})."), Ortak.Surum), true);
+                    return;
+                }
+                btnYeniSurum.Text = string.Format(M("Sürüm {0} hazır", "Version {0} available"), yeniSurum.Surum);
+                if (elle) YeniSurumuGoster();
+                else if (!Visible && tepsi.Visible && Ayarlar.Bildirim)
+                    tepsi.ShowBalloonTip(10000, Ortak.Ad, string.Format(M("Sürücü Aracı'nın yeni sürümü ({0}) yayınlandı. Görmek için tıklayın.",
+                                                                          "A new version of Driver Tool ({0}) is available. Click to view."), yeniSurum.Surum), ToolTipIcon.Info);
+            })));
+        }
+
+        void YeniSurumuGoster()
+        {
+            if (yeniSurum == null || mesgul) return;
+            SurumBilgisi bilgi = yeniSurum;
+            string notlar = bilgi.Notlar.Trim();
+            if (notlar.Length > 700) notlar = notlar.Substring(0, 700) + "...";
+            if (!Sor(string.Format(M("Sürücü Aracı {0} yayınlandı (şu anki sürüm: {1}).\n\n{2}\n\nŞimdi güncellensin mi? Program kendini günceller ve yeniden açılır.",
+                                     "Driver Tool {0} is available (current version: {1}).\n\n{2}\n\nUpdate now? The program updates itself and reopens."),
+                                   bilgi.Surum, Ortak.Surum, notlar), MessageBoxIcon.Question)) return;
+            Calistir(M("Yeni sürüm indiriliyor...", "Downloading the new version..."), () => { Guncelleyici.Kur(bilgi); return true; }, sonuc =>
+            {
+                Gecmis.Ekle("program", Ortak.Ad, Ortak.Surum, bilgi.Surum.ToString(), M("Güncellendi", "Updated"), true);
+                Process.Start(Application.ExecutablePath, "/devral");
+                Cik();
+            });
+        }
+
         // ---------- Ayarlar ----------
 
         void AyarlariAc()
@@ -1177,6 +1348,7 @@ namespace SurucuAraci
                     TemayiUygula(true);
                 }
                 tepsi.Visible = Ayarlar.TepsideCalis;
+                if (pencere.DenetimIstendi) ProgramGuncellemesiniDenetle(true);
                 if (pencere.DilDegisti && Sor(M("Dil değişikliğinin uygulanması için program yeniden başlatılmalı. Şimdi yeniden başlatılsın mı?",
                                                 "The program must restart to apply the language change. Restart now?"), MessageBoxIcon.Question))
                 {

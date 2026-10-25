@@ -15,10 +15,11 @@ namespace SurucuAraci
 
         readonly float olcek;
         readonly ComboBox temaSecimi, dilSecimi, kontrolSecimi;
-        readonly CheckBox tepsi, baslangic, bildirim;
+        readonly CheckBox tepsi, baslangic, bildirim, programGuncellemesi;
 
         public bool TemaDegisti { get; private set; }
         public bool DilDegisti { get; private set; }
+        public bool DenetimIstendi { get; private set; }  // "Simdi denetle" ile kapatildi
 
         public AyarlarFormu()
         {
@@ -68,9 +69,16 @@ namespace SurucuAraci
             };
             Tam(duzen, not);
 
+            Bolum(duzen, string.Format(M("Program (sürüm {0})", "Program (version {0})"), Ortak.Surum));
+            programGuncellemesi = Onay(M("Yeni sürümleri otomatik denetle (GitHub)", "Check for new versions automatically (GitHub)"), Ayarlar.ProgramGuncellemesi);
+            Tam(duzen, programGuncellemesi);
+            var simdiDenetle = new Dugme(M("Şimdi denetle", "Check now"), "\uE72C", DugmeTuru.Arac, Font) { Margin = new Padding(0, O(4), 0, O(4)) };
+            simdiDenetle.Click += (s, e) => { DenetimIstendi = true; Kaydet(); };
+            Tam(duzen, simdiDenetle);
+
             var butonlar = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Anchor = AnchorStyles.Right, Margin = new Padding(0, O(14), 0, O(8)) };
-            var kaydet = new Dugme(M("Kaydet", "Save"), "", DugmeTuru.Birincil, new Font("Segoe UI Semibold", 10f)) { Margin = new Padding(O(8), 0, 0, 0) };
-            var iptal = new Dugme(M("İptal", "Cancel"), "", DugmeTuru.Arac, Font);
+            var kaydet = new Dugme(M("Kaydet", "Save"), "\uE74E", DugmeTuru.Birincil, new Font("Segoe UI Semibold", 10f)) { Margin = new Padding(O(8), 0, 0, 0) };
+            var iptal = new Dugme(M("İptal", "Cancel"), "\uE711", DugmeTuru.Arac, Font);
             kaydet.Click += (s, e) => Kaydet();
             iptal.Click += (s, e) => { DialogResult = DialogResult.Cancel; };
             butonlar.Controls.Add(kaydet);
@@ -136,6 +144,7 @@ namespace SurucuAraci
             Ayarlar.TepsideCalis = tepsi.Checked;
             Ayarlar.Bildirim = bildirim.Checked;
             Ayarlar.KontrolGunu = KontrolDegerleri[kontrolSecimi.SelectedIndex];
+            Ayarlar.ProgramGuncellemesi = programGuncellemesi.Checked;
             try
             {
                 // Windows ile baslatma tepsi olmadan anlamsiz: pencere hic gorunmezdi

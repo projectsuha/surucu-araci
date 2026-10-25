@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -500,6 +501,249 @@ namespace SurucuAraci
             var sonuc = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
             foreach (string inf in infler.Where(OemInfMi)) sonuc[inf] = PnpUtilCalistir("/delete-driver " + inf).Kod == 0;
             return sonuc;
+        }
+
+        // ---------- Aygit onarimi (yonetici gerekir) ----------
+
+        // islem: restart, enable, disable veya reinstall (aygiti kaldirip Windows'un yeniden bulmasini saglar)
+        public static IslemSonucu AygitIslemi(string kimlik, string islem)
+        {
+            string tirnakli = "\"" + kimlik.Replace("\"", "") + "\"";
+            KomutSonucu k = PnpUtilCalistir("/" + (islem == "reinstall" ? "remove" : islem) + "-device " + tirnakli);
+            bool basarili = k.Kod == 0 || k.Kod == 3010;
+            if (basarili && islem == "reinstall")
+            {
+                KomutSonucu tarama = PnpUtilCalistir("/scan-devices");
+                basarili = tarama.Kod == 0 || tarama.Kod == 3010;
+                k = new KomutSonucu { Kod = Math.Max(k.Kod, tarama.Kod), Cikti = k.Cikti + "\n" + tarama.Cikti };
+            }
+            return new IslemSonucu
+            {
+                Basarili = basarili,
+                Mesaj = (basarili ? Dil.M("İşlem tamamlandı.", "Done.") : Dil.M("İşlem tamamlanamadı:\n\n", "The action failed:\n\n") + SonSatirlar(k.Cikti, 6))
+                    + (k.Kod == 3010 ? Dil.M("\n\nDeğişikliğin etkili olması için bilgisayarı yeniden başlatın.", "\n\nRestart the PC for the change to take effect.") : "")
+            };
+        }
+
+        // ---------- Sistem sagligi ----------
+
+        public static List<SaglikSatiri> SaglikBilgisi()
+        {
+            var satirlar = new List<SaglikSatiri>();
+            Action<string, string, string, string, string> ekle = (grup, ad, deger, not, simge) =>
+            {
+                if (!string.IsNullOrEmpty(deger)) satirlar.Add(new SaglikSatiri { Grup = grup, Ad = ad, Deger = deger, Not = not ?? "", SimgeAnahtari = simge });
+            };
+
+            string sistem = Dil.M("Sistem", "System");
+            foreach (ManagementObject m in Sorgula("SELECT Caption, Version, InstallDate, LastBootUpTime FROM Win32_OperatingSystem"))
+            {
+                ekle(sistem, "Windows", Metin(m, "Caption") + " (" + Metin(m, "Version") + ")", "", "bilgi");
+                DateTime acilis = CimTarihi(Metin(m, "LastBootUpTime"));
+                if (acilis != DateTime.MinValue)
+                {
+                    TimeSpan sure = DateTime.Now - acilis;
+                    ekle(sistem, Dil.M("Açık kalma süresi", "Uptime"), string.Format(Dil.M("{0} gün {1} saat", "{0} days {1} hours"), (int)sure.TotalDays, sure.Hours),
+                        sure.TotalDays > 14 ? Dil.M("Uzun süredir yeniden başlatılmadı; bazı güncellemeler yeniden başlatma bekliyor olabilir.", "Not restarted for a long time; some updates may be waiting for a restart.") : "",
+                        sure.TotalDays > 14 ? "guncelleme" : "bilgi");
+                }
+            }
+            foreach (ManagementObject m in Sorgula("SELECT Manufacturer, Model FROM Win32_ComputerSystem"))
+                ekle(sistem, Dil.M("Bilgisayar", "Computer"), (Metin(m, "Manufacturer") + " " + Metin(m, "Model")).Trim(), "", "bilgi");
+            foreach (ManagementObject m in Sorgula("SELECT Manufacturer, Product FROM Win32_BaseBoard"))
+                ekle(sistem, Dil.M("Anakart", "Motherboard"), (Metin(m, "Manufacturer") + " " + Metin(m, "Product")).Trim(), "", "bilgi");
+            foreach (ManagementObject m in Sorgula("SELECT SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS"))
+            {
+                DateTime tarih = CimTarihi(Metin(m, "ReleaseDate"));
+                ekle(sistem, "BIOS", Metin(m, "SMBIOSBIOSVersion") + (tarih != DateTime.MinValue ? " (" + tarih.ToString("yyyy-MM-dd") + ")" : ""), "", "bilgi");
+            }
+
+            string islemci = Dil.M("İşlemci, bellek ve ekran kartı", "Processor, memory and graphics");
+            foreach (ManagementObject m in Sorgula("SELECT Name, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor"))
+                ekle(islemci, Dil.M("İşlemci", "Processor"), Metin(m, "Name").Trim(),
+                    string.Format(Dil.M("{0} çekirdek, {1} iş parçacığı", "{0} cores, {1} threads"), Metin(m, "NumberOfCores"), Metin(m, "NumberOfLogicalProcessors")), "bilgi");
+            var moduller = Sorgula("SELECT Capacity, ConfiguredClockSpeed FROM Win32_PhysicalMemory").ToList();
+            long bellek = moduller.Sum(m => Convert.ToInt64(m["Capacity"] ?? 0L));
+            if (bellek > 0)
+                ekle(islemci, Dil.M("Bellek (RAM)", "Memory (RAM)"), BoyutMetni(bellek),
+                    string.Format(Dil.M("{0} modül, {1} MHz", "{0} module(s), {1} MHz"), moduller.Count, Metin(moduller[0], "ConfiguredClockSpeed")), "bilgi");
+            foreach (ManagementObject m in Sorgula("SELECT Name, DriverVersion FROM Win32_VideoController"))
+                ekle(islemci, Dil.M("Ekran kartı", "Graphics card"), Metin(m, "Name"), Dil.M("Sürücü ", "Driver ") + Metin(m, "DriverVersion"), "bilgi");
+
+            DiskSagligi(ekle);
+            PilSagligi(ekle);
+            MaviEkranlar(ekle);
+            return satirlar;
+        }
+
+        static IEnumerable<ManagementObject> Sorgula(string sorgu)
+        {
+            return Sorgula(null, sorgu);
+        }
+
+        static IEnumerable<ManagementObject> Sorgula(string isimAlani, string sorgu)
+        {
+            var sonuc = new List<ManagementObject>();
+            try
+            {
+                using (var arayici = isimAlani == null ? new ManagementObjectSearcher(sorgu)
+                                                      : new ManagementObjectSearcher(new ManagementScope(isimAlani), new ObjectQuery(sorgu)))
+                    foreach (ManagementObject m in arayici.Get()) sonuc.Add(m);
+            }
+            catch (Exception) { }  // bilgi okunamazsa o satir gosterilmez
+            return sonuc;
+        }
+
+        static DateTime CimTarihi(string ham)
+        {
+            return ham == "" ? DateTime.MinValue : Oku(() => ManagementDateTimeConverter.ToDateTime(ham), DateTime.MinValue);
+        }
+
+        static void DiskSagligi(Action<string, string, string, string, string> ekle)
+        {
+            string grup = Dil.M("Diskler", "Disks");
+            const string depolama = @"\\.\root\Microsoft\Windows\Storage";
+            // Asinma ve sicaklik yalnizca yonetici olarak okunabilir
+            var sayaclar = Sorgula(depolama, "SELECT DeviceId, Wear, Temperature, PowerOnHours FROM MSFT_StorageReliabilityCounter")
+                .ToDictionary(s => Metin(s, "DeviceId"), s => s);
+            foreach (ManagementObject m in Sorgula(depolama, "SELECT DeviceId, FriendlyName, MediaType, Size, HealthStatus FROM MSFT_PhysicalDisk"))
+            {
+                uint saglik = Convert.ToUInt32(m["HealthStatus"] ?? 5u);
+                uint tur = Convert.ToUInt32(m["MediaType"] ?? 0u);
+                string turAdi = tur == 4 ? "SSD" : tur == 3 ? "HDD" : "";
+                string durum = saglik == 0 ? Dil.M("Sağlıklı", "Healthy") : saglik == 1 ? Dil.M("Uyarı: yedeklerinizi alın", "Warning: back up your files")
+                    : saglik == 2 ? Dil.M("Sağlıksız: diski değiştirmeyi düşünün", "Unhealthy: consider replacing the disk") : Dil.M("Bilinmiyor", "Unknown");
+                var notlar = new List<string> { BoyutMetni(Convert.ToInt64(m["Size"] ?? 0L)) };
+                if (turAdi != "") notlar.Insert(0, turAdi);
+                ManagementObject sayac;
+                if (sayaclar.TryGetValue(Metin(m, "DeviceId"), out sayac))
+                {
+                    if (Metin(sayac, "Wear") != "") notlar.Add(string.Format(Dil.M("aşınma %{0}", "wear {0}%"), Metin(sayac, "Wear")));
+                    if (Metin(sayac, "Temperature") != "" && Metin(sayac, "Temperature") != "0") notlar.Add(Metin(sayac, "Temperature") + " °C");
+                    if (Metin(sayac, "PowerOnHours") != "") notlar.Add(string.Format(Dil.M("{0} saat çalıştı", "{0} power-on hours"), Metin(sayac, "PowerOnHours")));
+                }
+                else if (!YoneticiMi())
+                {
+                    notlar.Add(Dil.M("aşınma ve sıcaklık için yönetici olarak açın", "run as administrator for wear and temperature"));
+                }
+                ekle(grup, Metin(m, "FriendlyName"), durum, string.Join(" · ", notlar), saglik == 0 ? "guncel" : saglik == 1 ? "guncelleme" : saglik == 2 ? "sorunlu" : "bilgi");
+            }
+        }
+
+        // Pil bilgisi Windows'un kendi pil raporundan (powercfg) okunur; masaustu bilgisayarlarda pil yoktur
+        static void PilSagligi(Action<string, string, string, string, string> ekle)
+        {
+            string dosya = Path.Combine(Path.GetTempPath(), "SurucuAraci_pil_" + Guid.NewGuid().ToString("N") + ".xml");
+            try
+            {
+                Komut(Path.Combine(Environment.SystemDirectory, "powercfg.exe"), "/batteryreport /xml /output \"" + dosya + "\"", Encoding.Default);
+                if (!File.Exists(dosya)) return;
+                string grup = Dil.M("Pil", "Battery");
+                foreach (XElement pil in XElement.Load(dosya).Descendants().Where(e => e.Name.LocalName == "Battery"))
+                {
+                    Func<string, double> sayi = ad =>
+                    {
+                        XElement e = pil.Elements().FirstOrDefault(x => x.Name.LocalName == ad);
+                        double d;
+                        return e != null && double.TryParse(e.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out d) ? d : 0;
+                    };
+                    double tasarim = sayi("DesignCapacity"), tam = sayi("FullChargeCapacity"), dongu = sayi("CycleCount");
+                    if (tasarim <= 0) continue;
+                    double yuzde = Math.Min(100, tam / tasarim * 100);
+                    string durum = yuzde >= 80 ? Dil.M("İyi", "Good") : yuzde >= 50 ? Dil.M("Yıpranmış", "Worn") : Dil.M("Değiştirilmeli", "Should be replaced");
+                    ekle(grup, Dil.M("Pil sağlığı", "Battery health"), "%" + yuzde.ToString("0"),
+                        durum + " · " + string.Format(Dil.M("tam dolu {0:0.0} Wh / ilk günkü {1:0.0} Wh", "full charge {0:0.0} Wh / original {1:0.0} Wh"), tam / 1000, tasarim / 1000),
+                        yuzde >= 80 ? "guncel" : yuzde >= 50 ? "guncelleme" : "sorunlu");
+                    if (dongu > 0) ekle(grup, Dil.M("Şarj döngüsü", "Charge cycles"), dongu.ToString("0"), "", "bilgi");
+                }
+            }
+            catch (Exception) { }
+            finally
+            {
+                try { File.Delete(dosya); } catch (Exception) { }
+            }
+        }
+
+        // Mavi ekranlar Windows olay gunlugune "BugCheck" (1001) kaydi olarak yazilir
+        static void MaviEkranlar(Action<string, string, string, string, string> ekle)
+        {
+            string grup = Dil.M("Mavi ekran ve beklenmedik kapanmalar (son 90 gün)", "Blue screens and unexpected shutdowns (last 90 days)");
+            const string doksanGun = "TimeCreated[timediff(@SystemTime) <= 7776000000]";
+            int mavi = 0;
+            try
+            {
+                var sorgu = new EventLogQuery("System", PathType.LogName,
+                    "*[System[Provider[@Name='Microsoft-Windows-WER-SystemErrorReporting'] and EventID=1001 and " + doksanGun + "]]") { ReverseDirection = true };
+                using (var okuyucu = new EventLogReader(sorgu))
+                {
+                    for (EventRecord kayit = okuyucu.ReadEvent(); kayit != null && mavi < 15; kayit = okuyucu.ReadEvent())
+                    {
+                        using (kayit)
+                        {
+                            string ham = kayit.Properties.Count > 0 ? Convert.ToString(kayit.Properties[0].Value) : "";
+                            Match kod = Regex.Match(ham, @"0x[0-9a-fA-F]+");
+                            uint deger = kod.Success ? Convert.ToUInt32(kod.Value, 16) : 0;
+                            ekle(grup, (kayit.TimeCreated ?? DateTime.MinValue).ToString("yyyy-MM-dd HH:mm"),
+                                Dil.M("Mavi ekran: ", "Blue screen: ") + (deger == 0 ? "?" : "0x" + deger.ToString("X8") + " " + HataKoduAdi(deger)),
+                                HataKoduAciklamasi(deger), "sorunlu");
+                            mavi++;
+                        }
+                    }
+                }
+
+                int kapanma = 0;
+                var kapanmaSorgusu = new EventLogQuery("System", PathType.LogName,
+                    "*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and EventID=41 and " + doksanGun + "]]");
+                using (var okuyucu = new EventLogReader(kapanmaSorgusu))
+                    for (EventRecord kayit = okuyucu.ReadEvent(); kayit != null; kayit = okuyucu.ReadEvent()) { kayit.Dispose(); kapanma++; }
+                if (kapanma > 0)
+                    ekle(grup, Dil.M("Beklenmedik kapanma", "Unexpected shutdowns"), kapanma.ToString(),
+                        Dil.M("Bilgisayar düzgün kapatılmadan yeniden başladı (elektrik kesintisi, donma veya mavi ekran).", "The PC restarted without shutting down properly (power loss, freeze or blue screen)."),
+                        kapanma > 3 ? "sorunlu" : "guncelleme");
+                if (mavi == 0 && kapanma == 0)
+                    ekle(grup, Dil.M("Durum", "Status"), Dil.M("Mavi ekran veya beklenmedik kapanma yok", "No blue screens or unexpected shutdowns"), "", "guncel");
+            }
+            catch (Exception) { }
+        }
+
+        static string HataKoduAdi(uint kod)
+        {
+            switch (kod)
+            {
+                case 0x0A: return "IRQL_NOT_LESS_OR_EQUAL";
+                case 0x1A: return "MEMORY_MANAGEMENT";
+                case 0x1E: return "KMODE_EXCEPTION_NOT_HANDLED";
+                case 0x3B: return "SYSTEM_SERVICE_EXCEPTION";
+                case 0x50: return "PAGE_FAULT_IN_NONPAGED_AREA";
+                case 0x7E: return "SYSTEM_THREAD_EXCEPTION_NOT_HANDLED";
+                case 0x9F: return "DRIVER_POWER_STATE_FAILURE";
+                case 0xD1: return "DRIVER_IRQL_NOT_LESS_OR_EQUAL";
+                case 0xEF: return "CRITICAL_PROCESS_DIED";
+                case 0x116: return "VIDEO_TDR_FAILURE";
+                case 0x124: return "WHEA_UNCORRECTABLE_ERROR";
+                case 0x133: return "DPC_WATCHDOG_VIOLATION";
+                case 0x139: return "KERNEL_SECURITY_CHECK_FAILURE";
+                case 0x154: return "UNEXPECTED_STORE_EXCEPTION";
+                default: return "";
+            }
+        }
+
+        static string HataKoduAciklamasi(uint kod)
+        {
+            switch (kod)
+            {
+                case 0x0A:
+                case 0xD1: return Dil.M("Genellikle hatalı bir sürücüden kaynaklanır.", "Usually caused by a faulty driver.");
+                case 0x9F: return Dil.M("Bir sürücü uyku/uyanma sırasında yanıt vermedi; genellikle sürücü güncellemesi çözer.", "A driver didn't respond during sleep/wake; a driver update usually fixes it.");
+                case 0x116: return Dil.M("Ekran kartı sürücüsü yanıt vermedi; ekran kartı sürücüsünü güncelleyin.", "The graphics driver stopped responding; update the graphics driver.");
+                case 0x133: return Dil.M("Bir sürücü (sıklıkla disk veya ağ) çok uzun süre yanıt vermedi.", "A driver (often storage or network) took too long to respond.");
+                case 0x1A:
+                case 0x50: return Dil.M("Bellek (RAM) veya bir sürücü kaynaklı olabilir.", "May be caused by memory (RAM) or a driver.");
+                case 0x124: return Dil.M("Donanım hatası (işlemci, bellek veya aşırı ısınma) olabilir.", "May be a hardware error (CPU, memory or overheating).");
+                case 0x154:
+                case 0xEF: return Dil.M("Disk veya sistem dosyası sorunu olabilir.", "May be a disk or system file problem.");
+                default: return Dil.M("Sık tekrarlanıyorsa sürücüleri güncelleyin.", "If it keeps happening, update your drivers.");
+            }
         }
 
         // ---------- Uretici kaynaklari ----------
