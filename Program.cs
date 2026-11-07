@@ -14,6 +14,10 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
+// SurucuAraci.exe'nin Ozellikler > Ayrintilar'daki "Dosya aciklamasi"
+[assembly: System.Reflection.AssemblyTitle("Sürücü Aracı")]
+[assembly: System.Reflection.AssemblyDescription("Resmi kaynaklarla sürücü tarama ve güncelleme")]
+
 namespace SurucuAraci
 {
     static class Program

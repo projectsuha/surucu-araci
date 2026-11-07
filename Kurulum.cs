@@ -8,6 +8,10 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
+// SurucuAraciKurulum.exe'nin Ozellikler > Ayrintilar'daki "Dosya aciklamasi"
+[assembly: System.Reflection.AssemblyTitle("Sürücü Aracı Kurulumu")]
+[assembly: System.Reflection.AssemblyDescription("Sürücü Aracı kurulum programı")]
+
 namespace SurucuAraci
 {
     class KurulumFormu : Form

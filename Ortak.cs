@@ -2,13 +2,23 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+
+// Exe dosyasinin Ozellikler > Ayrintilar sekmesinde gorunen ortak bilgiler (program ve kurulum dosyasi).
+// Dosya adi ve aciklamasi her exe'nin kendi dosyasinda (Program.cs, Kurulum.cs) verilir.
+[assembly: AssemblyProduct("Sürücü Aracı")]
+[assembly: AssemblyCompany("projectsuha")]
+[assembly: AssemblyCopyright("© 2026 projectsuha · MIT Lisansı")]
+[assembly: AssemblyVersion(SurucuAraci.Ortak.Surum)]
+[assembly: AssemblyFileVersion(SurucuAraci.Ortak.Surum)]
+[assembly: AssemblyInformationalVersion(SurucuAraci.Ortak.Surum)]
 
 namespace SurucuAraci
 {
     static class Ortak
     {
-        // Yeni surum yayinlarken bu sayi ile git etiketi (v2.1 gibi) ayni olmalidir
-        public const string Surum = "2.4";
+        // Yeni surum yayinlarken bu sayi ile git etiketi (v2.1 gibi) ayni olmalidir; exe'nin dosya surumu de buradan gelir
+        public const string Surum = "2.5";
         public const string Depo = "projectsuha/surucu-araci";
 
         // Depo gizli oldugu icin program GitHub'a sifresiz erisemez; kendi kendini guncelleme bu yuzden kapali.
