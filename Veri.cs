@@ -45,8 +45,10 @@ namespace SurucuAraci
             return degerler.TryGetValue(ad, out deger) ? deger : varsayilan;
         }
 
+        // Dosya once yeniden okunur: tepsideki program ile zamanlanmis otomatik koruma ayni dosyaya yazabilir
         static void Yaz(string ad, string deger)
         {
+            if (!SadeceBellek) Yukle();
             degerler[ad] = deger;
             Kaydet();
         }
@@ -81,6 +83,22 @@ namespace SurucuAraci
         {
             get { return Tarih("sonprogramdenetimi"); }
             set { Yaz("sonprogramdenetimi", value.Ticks.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        // Haftalik geri yukleme noktasi ve aylik surucu yedegi icin zamanlanmis gorev kuruldu mu
+        public static bool OtomatikKoruma { get { return Al("otomatikkoruma", "0") == "1"; } set { Yaz("otomatikkoruma", value ? "1" : "0"); } }
+
+        // Otomatik koruma (zamanlanmis gorev) en son ne zaman nokta olusturdu ve yedek aldi
+        public static DateTime SonOtomatikNokta
+        {
+            get { return Tarih("sonotomatiknokta"); }
+            set { Yaz("sonotomatiknokta", value.Ticks.ToString(CultureInfo.InvariantCulture)); }
+        }
+
+        public static DateTime SonOtomatikYedek
+        {
+            get { return Tarih("sonotomatikyedek"); }
+            set { Yaz("sonotomatikyedek", value.Ticks.ToString(CultureInfo.InvariantCulture)); }
         }
 
         static DateTime Tarih(string ad)

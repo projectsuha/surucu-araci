@@ -34,6 +34,10 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 - **Bakım** – hiçbir aygıtın kullanmadığı eski sürücü sürümlerini bulur ve yedekleyerek temizler
 - **Geri yükleme noktaları** – listeler, yenisini oluşturur, bilgisayarı seçilen noktaya döndürür
 - **Sürücü yedekleme** – tüm sürücüleri yedekler; Windows'u yeniden kurunca klasörden geri yükler
+- **Otomatik koruma** – her hafta geri yükleme noktası, her ay sürücü yedeği (program kapalıyken de)
+- **Disk temizliği** – geçici dosyalar, Windows Update önbelleği, hata raporları, Geri Dönüşüm Kutusu
+- **Başlangıç programları** – Windows açılışında başlayan programları açıp kapatır (Görev Yöneticisi'yle aynı yöntem)
+- **Pil sağlığı geçmişi** – pil kapasitesinin zamanla değişimini grafikle gösterir
 - **İşlem geçmişi** – hangi sürücünün ne zaman neyle değiştiğini kaydeder
 - **Ayrıntı paneli, arama, HTML rapor**
 - **Açık / koyu tema**, **Türkçe / İngilizce**
@@ -72,6 +76,7 @@ derle.bat
 | `AyarlarFormu.cs` | Ayarlar penceresi |
 | `Sistem.cs` | Tarama, Windows Update, yedekleme, temizlik, geri yükleme, onarım, sistem sağlığı |
 | `Guncelleyici.cs` | Programın kendi yeni sürümünü denetleme ve kurma |
+| `Bakim.cs` | Otomatik koruma görevi, disk temizliği, başlangıç programları, pil geçmişi |
 | `Veri.cs` | Ayarlar ve işlem geçmişi |
 | `Gorunum.cs` | Tema ve özel çizilen kontroller |
 | `Kurulum.cs` | Kurulum programı |

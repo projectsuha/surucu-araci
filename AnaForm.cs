@@ -16,7 +16,7 @@ using System.Windows.Forms;
 
 namespace SurucuAraci
 {
-    enum Gorunum { Tarama, Gizlenenler, Uretici, Saglik, Gecmis, Bakim, GeriYukleme }
+    enum Gorunum { Tarama, Gizlenenler, Uretici, Saglik, Gecmis, Bakim, DiskTemizligi, Baslangic, GeriYukleme }
 
     class AnaForm : Form
     {
@@ -30,6 +30,7 @@ namespace SurucuAraci
         readonly ListView liste = new ListView();
         readonly Label bosDurum = new Label();
         readonly AyrintiPaneli ayrinti = new AyrintiPaneli();
+        readonly PilGrafigi pilGrafigi = new PilGrafigi();
         readonly Label ozet, altBilgi;
         readonly Kart kartGuncelleme, kartSorunlu, kartTaranan;
         readonly TextBox arama = new TextBox();
@@ -43,6 +44,7 @@ namespace SurucuAraci
         readonly Dugme btnYeniSurum, btnAyarlar, btnTara, btnGuncelle;
         readonly Dugme btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnTaramayaDon, btnTekrarGoster, btnAc, btnAracKur, btnSaglikYenile, btnGecmisiSil;
         readonly Dugme btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor;
+        readonly Dugme btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnTemizle, btnBaslangicDegistir;
         readonly Dictionary<Gorunum, Dugme> sekmeler = new Dictionary<Gorunum, Dugme>();
         readonly Dictionary<Gorunum, Dugme[]> gorunumAraclari = new Dictionary<Gorunum, Dugme[]>();
         readonly NotifyIcon tepsi = new NotifyIcon();
@@ -185,13 +187,20 @@ namespace SurucuAraci
             btnGeriDon = Arac(M("Bu Noktaya Dön", "Restore to This Point"), "\uE7A7", NoktayaDon);
             btnSistemGeriYukleme = Arac(M("Windows Sistem Geri Yükleme", "Windows System Restore"), "\uE8A7", SistemGeriYuklemeyiAc);
             btnRapor = Arac(M("Rapor Kaydet", "Save Report"), "\uE8A5", RaporKaydet);
+            btnDiskTemizligi = Arac(M("Disk Temizliği", "Disk Cleanup"), "\uE74D", () => GorunumuDegistir(Gorunum.DiskTemizligi));
+            btnBaslangic = Arac(M("Başlangıç Programları", "Startup Programs"), "\uE7E8", () => GorunumuDegistir(Gorunum.Baslangic));
+            btnBakimaDon = Arac(M("Bakım'a Dön", "Back to Maintenance"), "\uE72B", () => GorunumuDegistir(Gorunum.Bakim));
+            btnTemizle = Arac(M("Seçilenleri Temizle", "Clean Selected"), "\uE74D", DiskiTemizle);
+            btnBaslangicDegistir = Arac(M("Devre Dışı Bırak", "Disable"), "\uE7E8", BaslangicDurumunuDegistir);
 
             gorunumAraclari[Gorunum.Tarama] = new[] { btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnRapor };
             gorunumAraclari[Gorunum.Gizlenenler] = new[] { btnTaramayaDon, btnTekrarGoster, btnRapor };
             gorunumAraclari[Gorunum.Uretici] = new[] { btnAc, btnAracKur, btnRapor };
             gorunumAraclari[Gorunum.Saglik] = new[] { btnSaglikYenile, btnYonetici, btnRapor };
             gorunumAraclari[Gorunum.Gecmis] = new[] { btnGecmisiSil, btnRapor };
-            gorunumAraclari[Gorunum.Bakim] = new[] { btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnRapor };
+            gorunumAraclari[Gorunum.Bakim] = new[] { btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnDiskTemizligi, btnBaslangic, btnRapor };
+            gorunumAraclari[Gorunum.DiskTemizligi] = new[] { btnBakimaDon, btnTemizle, btnRapor };
+            gorunumAraclari[Gorunum.Baslangic] = new[] { btnBakimaDon, btnBaslangicDegistir, btnRapor };
             gorunumAraclari[Gorunum.GeriYukleme] = new[] { btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor };
 
             tumunuGoster.Text = M("Tüm aygıtları göster", "Show all devices");
@@ -239,6 +248,10 @@ namespace SurucuAraci
             cerceve.Controls.Add(liste);
             cerceve.Controls.Add(bosDurum);
             cerceve.Controls.Add(ayrinti);
+            pilGrafigi.Dock = DockStyle.Bottom;
+            pilGrafigi.Height = O(165);
+            pilGrafigi.Visible = false;
+            cerceve.Controls.Add(pilGrafigi);
             listeAlani.Controls.Add(cerceve);
 
             // ----- Durum cubugu -----
@@ -558,11 +571,15 @@ namespace SurucuAraci
             btnAc.Enabled = !mesgul && kaynak != null && kaynak.Adres != "";
             btnAracKur.Enabled = !mesgul && kaynak != null && kaynak.WingetId != null && !kaynak.Kurulu;
             btnSil.Enabled = !mesgul && gorunum == Gorunum.Bakim && liste.CheckedItems.Count > 0;
+            btnTemizle.Enabled = !mesgul && gorunum == Gorunum.DiskTemizligi && liste.CheckedItems.Count > 0;
+            BaslangicOgesi baslangic = SeciliEtiket<BaslangicOgesi>();
+            btnBaslangicDegistir.Enabled = !mesgul && baslangic != null;
+            btnBaslangicDegistir.Text = baslangic != null && !baslangic.Etkin ? M("Etkinleştir", "Enable") : M("Devre Dışı Bırak", "Disable");
             btnGeriDon.Enabled = !mesgul && SeciliEtiket<GeriNokta>() != null;
             btnGecmisiSil.Enabled = !mesgul && tumOgeler.Count > 0;
             btnRapor.Enabled = !mesgul && liste.Items.Count > 0;
             foreach (Dugme d in new[] { btnYeniSurum, btnAyarlar, btnTara, btnGizlenenler, btnTaramayaDon, btnBakimYenile, btnYedekle, btnKlasordenYukle,
-                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile })
+                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile, btnDiskTemizligi, btnBaslangic, btnBakimaDon })
                 d.Enabled = !mesgul;
             foreach (Dugme s in sekmeler.Values) s.Enabled = !mesgul;
             tumunuGoster.Enabled = arama.Enabled = !mesgul;
@@ -596,6 +613,8 @@ namespace SurucuAraci
                 case Gorunum.Saglik: SaglikGoster(); break;
                 case Gorunum.Gecmis: GecmisiGoster(); break;
                 case Gorunum.Bakim: EskiSuruculeriGoster(); break;
+                case Gorunum.DiskTemizligi: DiskTemizliginiGoster(); break;
+                case Gorunum.Baslangic: BaslangicGoster(); break;
                 case Gorunum.GeriYukleme: GeriYuklemeNoktalariniGoster(); break;
             }
         }
@@ -604,13 +623,15 @@ namespace SurucuAraci
         void GorunumAyarla(Gorunum hedef)
         {
             gorunum = hedef;
-            foreach (var s in sekmeler) s.Value.Secili = s.Key == hedef || (hedef == Gorunum.Gizlenenler && s.Key == Gorunum.Tarama);
+            foreach (var s in sekmeler) s.Value.Secili = s.Key == hedef || (hedef == Gorunum.Gizlenenler && s.Key == Gorunum.Tarama)
+                || ((hedef == Gorunum.DiskTemizligi || hedef == Gorunum.Baslangic) && s.Key == Gorunum.Bakim);
             araclar.SuspendLayout();
             araclar.Controls.Clear();
             araclar.Controls.AddRange(gorunumAraclari[hedef].Where(d => d != btnYonetici || !Sistem.YoneticiMi()).ToArray());
             araclar.ResumeLayout();
             tumunuGoster.Visible = hedef == Gorunum.Tarama;
             ayrinti.Visible = hedef == Gorunum.Tarama || hedef == Gorunum.Gizlenenler;
+            pilGrafigi.Visible = false;  // Sistem Sagligi yuklenince gecmis varsa gosterilir
             arama.Text = "";
         }
 
@@ -623,6 +644,8 @@ namespace SurucuAraci
                 case Gorunum.Saglik: return M("Sistem Sağlığı", "System Health");
                 case Gorunum.Gecmis: return M("İşlem Geçmişi", "Action History");
                 case Gorunum.Bakim: return M("Eski Sürücü Paketleri", "Old Driver Packages");
+                case Gorunum.DiskTemizligi: return M("Disk Temizliği", "Disk Cleanup");
+                case Gorunum.Baslangic: return M("Başlangıç Programları", "Startup Programs");
                 case Gorunum.GeriYukleme: return M("Geri Yükleme Noktaları", "Restore Points");
                 default: return M("Sürücü Tarama Sonuçları", "Driver Scan Results");
             }
@@ -1017,8 +1040,12 @@ namespace SurucuAraci
 
         void SaglikGoster()
         {
-            Calistir(M("Donanım bilgileri ve sağlık durumu okunuyor...", "Reading hardware information and health..."), Sistem.SaglikBilgisi, satirlar =>
+            Calistir(M("Donanım bilgileri ve sağlık durumu okunuyor...", "Reading hardware information and health..."),
+                () => Tuple.Create(Sistem.SaglikBilgisi(), Bakim.PilGecmisi()), sonuc =>
             {
+                List<SaglikSatiri> satirlar = sonuc.Item1;
+                pilGrafigi.Kayitlar = sonuc.Item2;
+                pilGrafigi.Visible = sonuc.Item2.Count >= 2;
                 // Grup basliklari kalin, renkli satirlar olarak eklenir (ListView'in kendi grup basligi koyu temada okunmuyor)
                 var ogeler = new List<ListViewItem>();
                 var baslikYazisi = new Font(liste.Font, FontStyle.Bold);
@@ -1067,6 +1094,8 @@ namespace SurucuAraci
                 case "yedek": return M("Sürücü yedekleme", "Driver backup");
                 case "onarim": return M("Aygıt onarımı", "Device repair");
                 case "program": return M("Program güncellemesi", "Program update");
+                case "disk": return M("Disk temizliği", "Disk cleanup");
+                case "baslangic": return M("Başlangıç programı", "Startup program");
                 default: return kod;
             }
         }
@@ -1194,6 +1223,106 @@ namespace SurucuAraci
                     Bilgi(sonuc.Mesaj, sonuc.Basarili);
                 });
             }
+        }
+
+        // ---------- Disk temizligi ----------
+
+        void DiskTemizliginiGoster()
+        {
+            Calistir(M("Temizlenebilecek dosyalar hesaplanıyor...", "Calculating files that can be cleaned up..."), Bakim.TemizlikKalemleri, kalemler =>
+            {
+                bool yonetici = Sistem.YoneticiMi();
+                List<ListViewItem> ogeler = kalemler.Select(k =>
+                {
+                    // Bazi sistem klasorleri okunabilir ama silinemez; boyut okunabildiyse gosterilir
+                    bool erisilemez = k.YoneticiGerekir && !yonetici && k.Boyut == 0;
+                    var oge = new ListViewItem(new[]
+                    {
+                        k.Ad,
+                        erisilemez ? "?" : Sistem.BoyutMetni(k.Boyut),
+                        erisilemez ? "" : k.DosyaSayisi.ToString(),
+                        k.Aciklama + (erisilemez ? M(" · boyut için yönetici olarak açın", " · run as administrator to see the size") : ""),
+                        k.Konum
+                    })
+                    {
+                        Tag = k,
+                        ImageKey = k.Anahtar == "geri-donusum" ? "sorunlu" : k.Boyut > 0 || erisilemez ? "guncelleme" : "guncel",
+                        Checked = k.VarsayilanSecili && (k.Boyut > 0 || erisilemez),
+                        ToolTipText = k.Aciklama
+                    };
+                    return oge;
+                }).ToList();
+                ListeyiDoldur(new[] { M("Kategori", "Category"), M("Boyut", "Size"), M("Dosya", "Files"), M("Açıklama", "Details"), M("Konum", "Location") },
+                    new[] { 230, 100, 70, 420, 300 }, ogeler, true, M("Temizlenecek bir şey bulunamadı.", "Nothing to clean up."));
+                long toplam = kalemler.Where(k => k.Anahtar != "geri-donusum").Sum(k => k.Boyut);
+                durum.Text = string.Format(M("Temizlenebilecek alan: {0}. Kullanımdaki dosyalar atlanır. Geri Dönüşüm Kutusu ancak siz işaretlerseniz boşaltılır.",
+                                             "Space that can be freed: {0}. Files in use are skipped. The Recycle Bin is only emptied if you tick it."), Sistem.BoyutMetni(toplam))
+                    + (yonetici ? "" : M(" Sistem klasörleri için programı yönetici olarak açın.", " Run as administrator for system folders."));
+            });
+        }
+
+        void DiskiTemizle()
+        {
+            List<TemizlikKalemi> secilen = liste.CheckedItems.Cast<ListViewItem>().Select(o => o.Tag as TemizlikKalemi).Where(k => k != null).ToList();
+            if (secilen.Count == 0) return;
+            if (secilen.Any(k => k.YoneticiGerekir) && !YoneticiOl()) return;
+            string adlar = string.Join("\n", secilen.Select(k => "• " + k.Ad));
+            bool geriDonusum = secilen.Any(k => k.Anahtar == "geri-donusum");
+            if (!Sor(string.Format(M("Şunlar temizlenecek:\n{0}\n\nBu dosyalar kalıcı olarak silinir.{1}\n\nDevam edilsin mi?",
+                                     "The following will be cleaned up:\n{0}\n\nThese files are deleted permanently.{1}\n\nContinue?"), adlar,
+                                   geriDonusum ? M("\nGeri Dönüşüm Kutusu'ndaki dosyalar da geri alınamaz.", "\nFiles in the Recycle Bin can't be recovered either.") : ""),
+                     geriDonusum ? MessageBoxIcon.Warning : MessageBoxIcon.Question)) return;
+            List<string> anahtarlar = secilen.Select(k => k.Anahtar).ToList();
+            Calistir(M("Dosyalar temizleniyor...", "Cleaning up files..."), () => Bakim.Temizle(anahtarlar), bosaltilan =>
+            {
+                Gecmis.Ekle("disk", string.Join(", ", secilen.Select(k => k.Ad)), "", Sistem.BoyutMetni(bosaltilan), M("Tamamlandı", "Done"), true);
+                Bilgi(string.Format(M("{0} alan boşaltıldı.", "{0} freed."), Sistem.BoyutMetni(bosaltilan)), true);
+                DiskTemizliginiGoster();
+            });
+        }
+
+        // ---------- Baslangic programlari ----------
+
+        void BaslangicGoster()
+        {
+            Calistir(M("Başlangıç programları okunuyor...", "Reading startup programs..."), Bakim.BaslangicProgramlari, ogeler =>
+            {
+                List<ListViewItem> satirlar = ogeler.Select(o =>
+                {
+                    var oge = new ListViewItem(new[] { o.Etkin ? M("Açık", "Enabled") : M("Kapalı", "Disabled"), o.Ad, Bakim.KonumAdi(o.Konum), o.Komut })
+                    {
+                        Tag = o,
+                        ImageKey = o.Etkin ? "guncel" : "gizli",
+                        ToolTipText = o.Komut,
+                        UseItemStyleForSubItems = false
+                    };
+                    oge.ForeColor = o.Etkin ? Tema.YesilYazi : Tema.Soluk;
+                    return oge;
+                }).ToList();
+                ListeyiDoldur(new[] { M("Durum", "Status"), M("Program", "Program"), M("Konum", "Location"), M("Komut", "Command") },
+                    new[] { 110, 260, 250, 400 }, satirlar, false, M("Windows açılışında başlayan program yok.", "No programs start with Windows."));
+                durum.Text = string.Format(M("{0} program, {1} tanesi açık. Kapattığınız program silinmez; yalnızca Windows açılırken kendiliğinden başlamaz.",
+                                             "{0} programs, {1} enabled. A disabled program isn't removed; it just doesn't start with Windows."),
+                                           ogeler.Count, ogeler.Count(o => o.Etkin));
+            });
+        }
+
+        void BaslangicDurumunuDegistir()
+        {
+            BaslangicOgesi o = SeciliEtiket<BaslangicOgesi>();
+            if (o == null) return;
+            if (o.YoneticiGerekir && !YoneticiOl()) return;
+            bool yeni = !o.Etkin;
+            try
+            {
+                Bakim.BaslangicDurumu(o, yeni);
+                Gecmis.Ekle("baslangic", o.Ad, yeni ? M("Kapalı", "Disabled") : M("Açık", "Enabled"), yeni ? M("Açık", "Enabled") : M("Kapalı", "Disabled"), M("Tamamlandı", "Done"), true);
+            }
+            catch (Exception h)
+            {
+                Bilgi(M("Değiştirilemedi: ", "Couldn't change it: ") + h.Message, false);
+            }
+            BaslangicGoster();
         }
 
         // ---------- Geri yukleme noktalari ----------
@@ -1350,6 +1479,7 @@ namespace SurucuAraci
                 }
                 tepsi.Visible = Ayarlar.TepsideCalis;
                 if (pencere.DenetimIstendi) ProgramGuncellemesiniDenetle(true);
+                if (pencere.KorumaIstegi.HasValue) OtomatikKorumayiAyarla(pencere.KorumaIstegi.Value);
                 if (pencere.DilDegisti && Sor(M("Dil değişikliğinin uygulanması için program yeniden başlatılmalı. Şimdi yeniden başlatılsın mı?",
                                                 "The program must restart to apply the language change. Restart now?"), MessageBoxIcon.Question))
                 {
@@ -1357,6 +1487,20 @@ namespace SurucuAraci
                     Cik();
                 }
             }
+        }
+
+        // Zamanlanmis gorevi kurar veya kaldirir; Windows bu islem icin bir kez izin (UAC) ister
+        void OtomatikKorumayiAyarla(bool acik)
+        {
+            Calistir(acik ? M("Otomatik koruma kuruluyor...", "Setting up automatic protection...") : M("Otomatik koruma kapatılıyor...", "Turning off automatic protection..."),
+                () => Bakim.KorumaGoreviniAyarla(acik), basarili =>
+            {
+                if (basarili) Ayarlar.OtomatikKoruma = acik;
+                Bilgi(!basarili ? M("İşlem yapılamadı (izin verilmemiş olabilir). Ayarlardan tekrar deneyebilirsiniz.", "It couldn't be done (permission may have been denied). You can try again in Settings.")
+                    : acik ? M("Otomatik koruma açıldı. Her pazar (bilgisayar kapalıysa ilk açılışta) geri yükleme noktası, ayda bir sürücü yedeği alınacak.",
+                               "Automatic protection is on. A restore point will be created every Sunday (or at the next start if the PC is off) and a driver backup monthly.")
+                    : M("Otomatik koruma kapatıldı.", "Automatic protection is off."), basarili);
+            });
         }
 
         // ---------- Rapor ----------

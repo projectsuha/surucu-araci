@@ -542,6 +542,99 @@ namespace SurucuAraci
         }
     }
 
+    // Pil sagligi gecmisi: zamana gore tam dolu kapasitenin ilk gunkune orani (%)
+    class PilGrafigi : Control
+    {
+        List<PilKaydi> kayitlar = new List<PilKaydi>();
+        Font baslikFontu, kucukFont;
+
+        public PilGrafigi()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+
+        public List<PilKaydi> Kayitlar
+        {
+            get { return kayitlar; }
+            set { kayitlar = value ?? new List<PilKaydi>(); Invalidate(); }
+        }
+
+        protected override void OnFontChanged(EventArgs e)
+        {
+            FontlariBirak();
+            base.OnFontChanged(e);
+        }
+
+        void FontlariBirak()
+        {
+            if (baslikFontu != null) baslikFontu.Dispose();
+            if (kucukFont != null) kucukFont.Dispose();
+            baslikFontu = kucukFont = null;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            if (baslikFontu == null) baslikFontu = new Font("Segoe UI Semibold", Font.SizeInPoints, GraphicsUnit.Point);
+            if (kucukFont == null) kucukFont = new Font(Font.FontFamily, Font.SizeInPoints * 0.85f, GraphicsUnit.Point);
+            Graphics g = e.Graphics;
+            using (var firca = new SolidBrush(Tema.Yuzey)) g.FillRectangle(firca, ClientRectangle);
+            using (var kalem = new Pen(Tema.Kenarlik)) g.DrawLine(kalem, 0, 0, Width, 0);
+
+            int bosluk = Font.Height;
+            TextRenderer.DrawText(g, Dil.M("Pil sağlığı geçmişi", "Battery health history"), baslikFontu, new Point(bosluk, bosluk / 2), Tema.Yazi, TextFormatFlags.NoPadding);
+            if (kayitlar.Count < 2) return;
+
+            // Dikey eksen: en dusuk degerin biraz altindan %100'e
+            double alt = Math.Max(0, Math.Floor((kayitlar.Min(k => k.Yuzde) - 5) / 10) * 10);
+            string ornekEtiket = "%100";
+            int solBosluk = bosluk + TextRenderer.MeasureText(ornekEtiket, kucukFont).Width + bosluk / 2;
+            var alan = Rectangle.FromLTRB(solBosluk, bosluk * 2, Width - bosluk * 2, Height - bosluk * 2);
+            if (alan.Width < 50 || alan.Height < 30) return;
+
+            DateTime ilk = kayitlar[0].Tarih, son = kayitlar[kayitlar.Count - 1].Tarih;
+            double gunler = Math.Max(1, (son - ilk).TotalDays);
+            Func<PilKaydi, PointF> nokta = k => new PointF(
+                alan.Left + (float)((k.Tarih - ilk).TotalDays / gunler * alan.Width),
+                alan.Bottom - (float)((k.Yuzde - alt) / (100 - alt) * alan.Height));
+
+            using (var cizgi = new Pen(Tema.Kenarlik) { DashStyle = DashStyle.Dot })
+            {
+                for (double d = alt; d <= 100; d += (100 - alt) / 2)
+                {
+                    float y = alan.Bottom - (float)((d - alt) / (100 - alt) * alan.Height);
+                    g.DrawLine(cizgi, alan.Left, y, alan.Right, y);
+                    TextRenderer.DrawText(g, "%" + d.ToString("0"), kucukFont, new Rectangle(bosluk, (int)y - kucukFont.Height / 2, solBosluk - bosluk - bosluk / 2, kucukFont.Height),
+                        Tema.Soluk, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+                }
+            }
+            foreach (DateTime t in new[] { ilk, ilk.AddDays(gunler / 2), son })
+            {
+                string metin = t.ToString("yyyy-MM");
+                int x = alan.Left + (int)((t - ilk).TotalDays / gunler * alan.Width);
+                int genislik = TextRenderer.MeasureText(metin, kucukFont).Width;
+                TextRenderer.DrawText(g, metin, kucukFont, new Point(Math.Min(alan.Right - genislik, Math.Max(alan.Left, x - genislik / 2)), alan.Bottom + bosluk / 3),
+                    Tema.Soluk, TextFormatFlags.NoPadding);
+            }
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            PointF[] noktalar = kayitlar.Select(nokta).ToArray();
+            using (var yol = new GraphicsPath())
+            {
+                yol.AddLines(noktalar);
+                yol.AddLine(noktalar[noktalar.Length - 1], new PointF(noktalar[noktalar.Length - 1].X, alan.Bottom));
+                yol.AddLine(new PointF(noktalar[0].X, alan.Bottom), noktalar[0]);
+                using (var dolgu = new SolidBrush(Color.FromArgb(Tema.Koyu ? 50 : 35, Tema.Vurgu))) g.FillPath(dolgu, yol);
+            }
+            using (var kalem = new Pen(Tema.Vurgu, Math.Max(2, Font.Height / 8f))) g.DrawLines(kalem, noktalar);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) FontlariBirak();
+            base.Dispose(disposing);
+        }
+    }
+
     // Durum cubugunu duz zeminle cizer
     class DuzCizici : ToolStripProfessionalRenderer
     {

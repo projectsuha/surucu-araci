@@ -15,11 +15,15 @@ namespace SurucuAraci
 
         readonly float olcek;
         readonly ComboBox temaSecimi, dilSecimi, kontrolSecimi;
-        readonly CheckBox tepsi, baslangic, bildirim, programGuncellemesi;
+        readonly CheckBox tepsi, baslangic, bildirim, programGuncellemesi, koruma;
+        readonly bool korumaAcikti;
 
         public bool TemaDegisti { get; private set; }
         public bool DilDegisti { get; private set; }
         public bool DenetimIstendi { get; private set; }  // "Simdi denetle" ile kapatildi
+
+        // Otomatik koruma acilip kapatildiysa istenen durum; degismediyse null (gorev ana pencerede kurulur, izin ister)
+        public bool? KorumaIstegi { get; private set; }
 
         public AyarlarFormu()
         {
@@ -69,6 +73,19 @@ namespace SurucuAraci
             };
             Tam(duzen, not);
 
+            Bolum(duzen, M("Koruma", "Protection"));
+            korumaAcikti = Ayarlar.OtomatikKoruma || Bakim.KorumaGoreviVar();
+            koruma = Onay(M("Her hafta geri yükleme noktası, her ay sürücü yedeği al (otomatik)", "Create a restore point weekly and a driver backup monthly (automatic)"), korumaAcikti);
+            Tam(duzen, koruma);
+            Tam(duzen, new Label
+            {
+                Text = M("Program kapalıyken de çalışır. Açıp kapatırken Windows bir kez izin ister. Son iki otomatik yedek saklanır.",
+                         "Works even when the program is closed. Windows asks for permission once when you turn it on or off. The last two automatic backups are kept."),
+                AutoSize = true,
+                MaximumSize = new Size(O(460), 0),
+                ForeColor = Tema.Soluk,
+                Margin = new Padding(0, O(2), 0, O(6))
+            });
             if (Ortak.KendiniGuncelle)
             {
                 Bolum(duzen, string.Format(M("Program (sürüm {0})", "Program (version {0})"), Ortak.Surum));
@@ -159,6 +176,7 @@ namespace SurucuAraci
             Ayarlar.Bildirim = bildirim.Checked;
             Ayarlar.KontrolGunu = KontrolDegerleri[kontrolSecimi.SelectedIndex];
             Ayarlar.ProgramGuncellemesi = programGuncellemesi.Checked;
+            if (koruma.Checked != korumaAcikti) KorumaIstegi = koruma.Checked;
             try
             {
                 // Windows ile baslatma tepsi olmadan anlamsiz: pencere hic gorunmezdi

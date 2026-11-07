@@ -70,6 +70,37 @@ namespace SurucuAraci
         public string SimgeAnahtari = "bilgi";
     }
 
+    // Disk temizliginde bir kategori (gecici dosyalar, Windows Update onbellegi...)
+    class TemizlikKalemi
+    {
+        public string Anahtar, Ad, Konum, Aciklama;
+        public long Boyut;
+        public int DosyaSayisi;
+        public bool YoneticiGerekir, VarsayilanSecili = true;
+    }
+
+    enum BaslangicKonumu { KullaniciKaydi, MakineKaydi, Makine32Kaydi, KullaniciKlasoru, OrtakKlasor }
+
+    // Windows acilisinda calisan bir program; Gorev Yoneticisi'yle ayni acik/kapali kaydini kullanir
+    class BaslangicOgesi
+    {
+        public string Ad, Komut;
+        public string Anahtar;  // kayit degeri adi veya baslangic klasorundeki dosya adi
+        public BaslangicKonumu Konum;
+        public bool Etkin;
+
+        public bool YoneticiGerekir
+        {
+            get { return Konum == BaslangicKonumu.MakineKaydi || Konum == BaslangicKonumu.Makine32Kaydi || Konum == BaslangicKonumu.OrtakKlasor; }
+        }
+    }
+
+    class PilKaydi
+    {
+        public DateTime Tarih;
+        public double Yuzde;
+    }
+
     class SurumBilgisi
     {
         public Version Surum;

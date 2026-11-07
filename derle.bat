@@ -7,9 +7,9 @@ set ORTAK=/nologo /target:winexe /codepage:65001 /optimize /win32icon:SurucuArac
   /r:System.Xml.dll /r:System.Xml.Linq.dll /r:System.Web.Extensions.dll
 
 %CSC% %ORTAK% /out:SurucuAraci.exe /main:SurucuAraci.Program ^
-  Program.cs AnaForm.cs AyarlarFormu.cs Sistem.cs Guncelleyici.cs Veri.cs Modeller.cs Gorunum.cs Dil.cs Ortak.cs
+  Program.cs AnaForm.cs AyarlarFormu.cs Sistem.cs Bakim.cs Guncelleyici.cs Veri.cs Modeller.cs Gorunum.cs Dil.cs Ortak.cs
 if errorlevel 1 exit /b 1
 
-:: Kurulum dosyasi programi icinde tasir
-%CSC% %ORTAK% /out:SurucuAraciKurulum.exe /resource:SurucuAraci.exe,SurucuAraci.Uygulama.exe ^
-  Kurulum.cs Gorunum.cs Dil.cs Ortak.cs
+:: Kurulum dosyasi programi icinde tasir (veri modellerinin hepsini kullanmadigi icin CS0649 uyarisi kapatilir)
+%CSC% %ORTAK% /out:SurucuAraciKurulum.exe /resource:SurucuAraci.exe,SurucuAraci.Uygulama.exe /nowarn:649 ^
+  Kurulum.cs Gorunum.cs Modeller.cs Dil.cs Ortak.cs

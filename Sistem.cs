@@ -313,7 +313,7 @@ namespace SurucuAraci
 
         // ---------- Komutlar ve yedekleme ----------
 
-        static KomutSonucu Komut(string dosya, string argumanlar, Encoding kodlama)
+        internal static KomutSonucu Komut(string dosya, string argumanlar, Encoding kodlama)
         {
             var bilgi = new ProcessStartInfo(dosya, argumanlar)
             {
@@ -351,14 +351,20 @@ namespace SurucuAraci
             return yol;
         }
 
-        static long KlasorBoyutu(string klasor)
+        internal static long KlasorBoyutu(string klasor)
         {
             return new DirectoryInfo(klasor).GetFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
         }
 
         public static IslemSonucu TumunuYedekle()
         {
-            string klasor = YeniYedekKlasoru(Dil.M(" tam yedek", " full backup"));
+            return TumunuYedekle(Dil.M(" tam yedek", " full backup"));
+        }
+
+        // ek: yedek klasorunun adina eklenir (" tam yedek", " otomatik yedek" gibi)
+        public static IslemSonucu TumunuYedekle(string ek)
+        {
+            string klasor = YeniYedekKlasoru(ek);
             KomutSonucu k = PnpUtilCalistir("/export-driver * \"" + klasor + "\"");
             int adet = Directory.GetFiles(klasor, "*.inf", SearchOption.AllDirectories).Length;
             if (adet == 0)

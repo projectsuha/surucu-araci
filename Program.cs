@@ -1,6 +1,7 @@
 // Program.cs - Baslangic noktasi: tek kopya calisma, sistem tepsisinde baslama ve kaldirma
 //   /tepsi   Windows acilisinda pencere acmadan sistem tepsisinde baslar
 //   /devral  Calisan kopyanin kapanmasini bekleyip yerine gecer (yonetici olarak yeniden baslatma)
+//   /otomatik-koruma  Zamanlanmis gorevin calistirdigi mod: pencere acmadan geri yukleme noktasi ve surucu yedegi
 //   /kaldir  Programi kaldirir (Ayarlar > Uygulamalar listesinden cagrilir); /sessiz ile soru sormadan
 using System;
 using System.Diagnostics;
@@ -35,6 +36,11 @@ namespace SurucuAraci
             if (secenekler.Contains("/kaldir"))
             {
                 Kaldirici.Calistir(secenekler.Contains("/sessiz"));
+                return;
+            }
+            if (secenekler.Contains("/otomatik-koruma"))
+            {
+                Bakim.OtomatikKorumaCalistir();
                 return;
             }
             bool gizli = secenekler.Contains("/tepsi");
@@ -160,6 +166,8 @@ namespace SurucuAraci
                 Registry.CurrentUser.DeleteSubKeyTree(Ortak.KaldirmaAnahtari, false);
             }
             catch (Exception) { }
+            // Otomatik koruma gorevi kaldirilir (yonetici izni ister)
+            if (Ayarlar.OtomatikKoruma || Bakim.KorumaGoreviVar()) Bakim.KorumaGoreviniAyarla(false);
             foreach (string kisayol in Ortak.TumKisayollar())
             {
                 try { File.Delete(kisayol); } catch (Exception) { }
