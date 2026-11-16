@@ -16,7 +16,7 @@ using System.Windows.Forms;
 
 namespace SurucuAraci
 {
-    enum Gorunum { Tarama, Gizlenenler, Uretici, Saglik, Gecmis, Bakim, DiskTemizligi, Baslangic, GeriYukleme }
+    enum Gorunum { Tarama, Gizlenenler, Uretici, Programlar, Saglik, Gecmis, Bakim, DiskTemizligi, Baslangic, GeriYukleme }
 
     class AnaForm : Form
     {
@@ -44,6 +44,7 @@ namespace SurucuAraci
         readonly Dugme btnYeniSurum, btnAyarlar, btnTara, btnGuncelle;
         readonly Dugme btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnTaramayaDon, btnTekrarGoster, btnAc, btnAracKur, btnSaglikYenile, btnGecmisiSil;
         readonly Dugme btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor;
+        readonly Dugme btnProgramGuncelle, btnProgramYenile;
         readonly Dugme btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnTemizle, btnBaslangicDegistir;
         readonly Dictionary<Gorunum, Dugme> sekmeler = new Dictionary<Gorunum, Dugme>();
         readonly Dictionary<Gorunum, Dugme[]> gorunumAraclari = new Dictionary<Gorunum, Dugme[]>();
@@ -148,6 +149,7 @@ namespace SurucuAraci
             sekmeSatiri.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             var sekmeAkisi = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
             Sekme(sekmeAkisi, Gorunum.Tarama, M("Tarama", "Scan"), "\uE721");
+            Sekme(sekmeAkisi, Gorunum.Programlar, M("Programlar", "Programs"), "\uECAA");
             Sekme(sekmeAkisi, Gorunum.Uretici, M("Üretici Kaynakları", "Manufacturer Sources"), "\uE8F1");
             Sekme(sekmeAkisi, Gorunum.Saglik, M("Sistem Sağlığı", "System Health"), "\uE95E");
             Sekme(sekmeAkisi, Gorunum.Gecmis, M("Geçmiş", "History"),"\uE81C");
@@ -191,10 +193,13 @@ namespace SurucuAraci
             btnBaslangic = Arac(M("Başlangıç Programları", "Startup Programs"), "\uE7E8", () => GorunumuDegistir(Gorunum.Baslangic));
             btnBakimaDon = Arac(M("Bakım'a Dön", "Back to Maintenance"), "\uE72B", () => GorunumuDegistir(Gorunum.Bakim));
             btnTemizle = Arac(M("Seçilenleri Temizle", "Clean Selected"), "\uE74D", DiskiTemizle);
+            btnProgramGuncelle = Arac(M("Seçilenleri Güncelle", "Update Selected"), "\uE896", ProgramlariGuncelle);
+            btnProgramYenile = Arac(M("Yeniden Denetle", "Check Again"), "\uE72C", ProgramlariGoster);
             btnBaslangicDegistir = Arac(M("Devre Dışı Bırak", "Disable"), "\uE7E8", BaslangicDurumunuDegistir);
 
             gorunumAraclari[Gorunum.Tarama] = new[] { btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnRapor };
             gorunumAraclari[Gorunum.Gizlenenler] = new[] { btnTaramayaDon, btnTekrarGoster, btnRapor };
+            gorunumAraclari[Gorunum.Programlar] = new[] { btnProgramGuncelle, btnProgramYenile, btnRapor };
             gorunumAraclari[Gorunum.Uretici] = new[] { btnAc, btnAracKur, btnRapor };
             gorunumAraclari[Gorunum.Saglik] = new[] { btnSaglikYenile, btnYonetici, btnRapor };
             gorunumAraclari[Gorunum.Gecmis] = new[] { btnGecmisiSil, btnRapor };
@@ -226,6 +231,8 @@ namespace SurucuAraci
             // Taramada yalnizca guncellemesi olan satirlar isaretlenebilir
             liste.ItemCheck += (s, e) =>
             {
+                var p = liste.Items[e.Index].Tag as ProgramGuncellemesi;
+                if (gorunum == Gorunum.Programlar && p != null && !p.Kurulabilir) e.NewValue = e.CurrentValue;
                 if (gorunum != Gorunum.Tarama) return;
                 var a = liste.Items[e.Index].Tag as Aygit;
                 if (a == null || a.Guncelleme == null) e.NewValue = e.CurrentValue;
@@ -572,6 +579,9 @@ namespace SurucuAraci
             btnAracKur.Enabled = !mesgul && kaynak != null && kaynak.WingetId != null && !kaynak.Kurulu;
             btnSil.Enabled = !mesgul && gorunum == Gorunum.Bakim && liste.CheckedItems.Count > 0;
             btnTemizle.Enabled = !mesgul && gorunum == Gorunum.DiskTemizligi && liste.CheckedItems.Count > 0;
+            int programSecili = gorunum == Gorunum.Programlar ? liste.CheckedItems.Count : 0;
+            btnProgramGuncelle.Enabled = !mesgul && programSecili > 0;
+            btnProgramGuncelle.Text = M("Seçilenleri Güncelle", "Update Selected") + (programSecili > 0 ? " (" + programSecili + ")" : "");
             BaslangicOgesi baslangic = SeciliEtiket<BaslangicOgesi>();
             btnBaslangicDegistir.Enabled = !mesgul && baslangic != null;
             btnBaslangicDegistir.Text = baslangic != null && !baslangic.Etkin ? M("Etkinleştir", "Enable") : M("Devre Dışı Bırak", "Disable");
@@ -579,7 +589,7 @@ namespace SurucuAraci
             btnGecmisiSil.Enabled = !mesgul && tumOgeler.Count > 0;
             btnRapor.Enabled = !mesgul && liste.Items.Count > 0;
             foreach (Dugme d in new[] { btnYeniSurum, btnAyarlar, btnTara, btnGizlenenler, btnTaramayaDon, btnBakimYenile, btnYedekle, btnKlasordenYukle,
-                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile, btnDiskTemizligi, btnBaslangic, btnBakimaDon })
+                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile, btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnProgramYenile })
                 d.Enabled = !mesgul;
             foreach (Dugme s in sekmeler.Values) s.Enabled = !mesgul;
             tumunuGoster.Enabled = arama.Enabled = !mesgul;
@@ -609,6 +619,7 @@ namespace SurucuAraci
             {
                 case Gorunum.Tarama: TaramayiGoster(); break;
                 case Gorunum.Gizlenenler: GizlenenleriGoster(); break;
+                case Gorunum.Programlar: ProgramlariGoster(); break;
                 case Gorunum.Uretici: UreticiKaynaklariniGoster(); break;
                 case Gorunum.Saglik: SaglikGoster(); break;
                 case Gorunum.Gecmis: GecmisiGoster(); break;
@@ -640,6 +651,7 @@ namespace SurucuAraci
             switch (gorunum)
             {
                 case Gorunum.Gizlenenler: return M("Gizlenen Güncellemeler", "Hidden Updates");
+                case Gorunum.Programlar: return M("Program Güncellemeleri", "Program Updates");
                 case Gorunum.Uretici: return M("Üretici Kaynakları", "Manufacturer Sources");
                 case Gorunum.Saglik: return M("Sistem Sağlığı", "System Health");
                 case Gorunum.Gecmis: return M("İşlem Geçmişi", "Action History");
@@ -1036,6 +1048,59 @@ namespace SurucuAraci
             });
         }
 
+        // ---------- Programlar ----------
+
+        void ProgramlariGoster()
+        {
+            Calistir(M("Programların ve NVIDIA sürücüsünün güncellemeleri aranıyor (bir dakika sürebilir)...",
+                       "Looking for program and NVIDIA driver updates (this may take a minute)..."), Programlar.GuncellemeleriBul, bulunanlar =>
+            {
+                List<ListViewItem> ogeler = bulunanlar.Select(p => new ListViewItem(new[] { p.Ad, p.Surum, p.YeniSurum, p.Kaynak, p.Not })
+                {
+                    Tag = p,
+                    ImageKey = !p.GuncellemeVar ? (p.YeniSurum == "?" ? "bilgi" : "guncel") : p.Kurulabilir ? "guncelleme" : "bilgi",
+                    Checked = p.Kurulabilir,
+                    ToolTipText = p.Kimlik + (p.Not != "" ? "\n" + p.Not : "")
+                }).ToList();
+                ListeyiDoldur(new[] { M("Program", "Program"), M("Kurulu", "Installed"), M("En Yeni", "Latest"), M("Kaynak", "Source"), M("Not", "Note") },
+                    new[] { 320, 120, 120, 100, 380 }, ogeler, true, M("Bütün programlar güncel.", "All programs are up to date."));
+                int adet = bulunanlar.Count(p => p.GuncellemeVar);
+                durum.Text = (adet > 0
+                    ? string.Format(M("{0} programın güncellemesi var. ", "{0} programs have updates. "), adet)
+                    : M("Güncellemesi olan program bulunamadı. ", "No program updates found. "))
+                    + M("Güncellemeler programların kendi resmi kaynaklarından Windows'un program yükleyicisiyle (winget) kurulur.",
+                        "Updates are installed from each program's official source using Windows Package Manager (winget).");
+            });
+        }
+
+        void ProgramlariGuncelle()
+        {
+            List<ProgramGuncellemesi> secilen = liste.CheckedItems.Cast<ListViewItem>().Select(o => o.Tag as ProgramGuncellemesi)
+                .Where(p => p != null && p.Kurulabilir).ToList();
+            if (secilen.Count == 0) return;
+            if (!Sor(string.Format(M("Şu programlar güncellenecek:\n{0}\n\nAçık olan programları kapatmanız önerilir; bazı programlar kurulum için yönetici izni isteyebilir. Lisans sözleşmeleri kabul edilmiş sayılır.\n\nDevam edilsin mi?",
+                                     "The following programs will be updated:\n{0}\n\nClosing these programs first is recommended; some may ask for administrator permission. License agreements are accepted.\n\nContinue?"),
+                                   string.Join("\n", secilen.Select(p => "• " + p.Ad + "  " + p.Surum + " → " + p.YeniSurum))), MessageBoxIcon.Question)) return;
+            // Winget programlari once, NVIDIA kurulumu (kendi penceresi acilir) en son
+            secilen = secilen.OrderBy(p => p.Tur == ProgramTuru.Nvidia ? 1 : 0).ToList();
+            Calistir(M("Programlar güncelleniyor...", "Updating programs..."), () => secilen.Select(p =>
+            {
+                IslemSonucu s;
+                try { s = Programlar.Guncelle(p); }
+                catch (Exception h) { s = new IslemSonucu { Mesaj = h.Message }; }
+                return Tuple.Create(p, s);
+            }).ToList(), sonuclar =>
+            {
+                foreach (var s in sonuclar)
+                    Gecmis.Ekle("uygulama", s.Item1.Ad, s.Item1.Surum, s.Item1.YeniSurum, s.Item2.Mesaj, s.Item2.Basarili);
+                int basarili = sonuclar.Count(s => s.Item2.Basarili);
+                string ayrinti = string.Join("\n", sonuclar.Select(s => (s.Item2.Basarili ? "✓ " : "✗ ") + s.Item1.Ad + ": " + s.Item2.Mesaj));
+                Bilgi(string.Format(M("{0}/{1} program güncellendi.\n\n{2}", "{0}/{1} programs updated.\n\n{2}"), basarili, sonuclar.Count, ayrinti),
+                      basarili == sonuclar.Count);
+                ProgramlariGoster();
+            });
+        }
+
         // ---------- Sistem sagligi ----------
 
         void SaglikGoster()
@@ -1093,7 +1158,8 @@ namespace SurucuAraci
                 case "geriyukleme": return M("Sistem geri yükleme", "System restore");
                 case "yedek": return M("Sürücü yedekleme", "Driver backup");
                 case "onarim": return M("Aygıt onarımı", "Device repair");
-                case "program": return M("Program güncellemesi", "Program update");
+                case "program": return M("Sürücü Aracı güncellemesi", "Driver Tool update");
+                case "uygulama": return M("Program güncellemesi", "Program update");
                 case "disk": return M("Disk temizliği", "Disk cleanup");
                 case "baslangic": return M("Başlangıç programı", "Startup program");
                 default: return kod;
