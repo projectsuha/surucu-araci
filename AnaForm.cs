@@ -44,7 +44,7 @@ namespace SurucuAraci
         readonly Dugme btnYeniSurum, btnAyarlar, btnTara, btnGuncelle;
         readonly Dugme btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnTaramayaDon, btnTekrarGoster, btnAc, btnAracKur, btnSaglikYenile, btnGecmisiSil;
         readonly Dugme btnBakimYenile, btnSil, btnYedekle, btnKlasordenYukle, btnYonetici, btnYeniNokta, btnGeriDon, btnSistemGeriYukleme, btnRapor;
-        readonly Dugme btnProgramGuncelle, btnProgramYenile;
+        readonly Dugme btnProgramGuncelle, btnProgramYenile, btnFormatSonrasi;
         readonly Dugme btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnTemizle, btnBaslangicDegistir;
         readonly Dictionary<Gorunum, Dugme> sekmeler = new Dictionary<Gorunum, Dugme>();
         readonly Dictionary<Gorunum, Dugme[]> gorunumAraclari = new Dictionary<Gorunum, Dugme[]>();
@@ -193,11 +193,12 @@ namespace SurucuAraci
             btnBaslangic = Arac(M("Başlangıç Programları", "Startup Programs"), "\uE7E8", () => GorunumuDegistir(Gorunum.Baslangic));
             btnBakimaDon = Arac(M("Bakım'a Dön", "Back to Maintenance"), "\uE72B", () => GorunumuDegistir(Gorunum.Bakim));
             btnTemizle = Arac(M("Seçilenleri Temizle", "Clean Selected"), "\uE74D", DiskiTemizle);
+            btnFormatSonrasi = Arac(M("Format Sonrası Kurulum", "Post-Install Setup"), "\uE895", FormatSonrasiKurulum);
             btnProgramGuncelle = Arac(M("Seçilenleri Güncelle", "Update Selected"), "\uE896", ProgramlariGuncelle);
             btnProgramYenile = Arac(M("Yeniden Denetle", "Check Again"), "\uE72C", ProgramlariGoster);
             btnBaslangicDegistir = Arac(M("Devre Dışı Bırak", "Disable"), "\uE7E8", BaslangicDurumunuDegistir);
 
-            gorunumAraclari[Gorunum.Tarama] = new[] { btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnRapor };
+            gorunumAraclari[Gorunum.Tarama] = new[] { btnFormatSonrasi, btnKatalog, btnOnar, btnGizle, btnGizlenenler, btnRapor };
             gorunumAraclari[Gorunum.Gizlenenler] = new[] { btnTaramayaDon, btnTekrarGoster, btnRapor };
             gorunumAraclari[Gorunum.Programlar] = new[] { btnProgramGuncelle, btnProgramYenile, btnRapor };
             gorunumAraclari[Gorunum.Uretici] = new[] { btnAc, btnAracKur, btnRapor };
@@ -589,7 +590,7 @@ namespace SurucuAraci
             btnGecmisiSil.Enabled = !mesgul && tumOgeler.Count > 0;
             btnRapor.Enabled = !mesgul && liste.Items.Count > 0;
             foreach (Dugme d in new[] { btnYeniSurum, btnAyarlar, btnTara, btnGizlenenler, btnTaramayaDon, btnBakimYenile, btnYedekle, btnKlasordenYukle,
-                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile, btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnProgramYenile })
+                                        btnYonetici, btnYeniNokta, btnSistemGeriYukleme, btnSaglikYenile, btnDiskTemizligi, btnBaslangic, btnBakimaDon, btnProgramYenile, btnFormatSonrasi })
                 d.Enabled = !mesgul;
             foreach (Dugme s in sekmeler.Values) s.Enabled = !mesgul;
             tumunuGoster.Enabled = arama.Enabled = !mesgul;
@@ -873,6 +874,67 @@ namespace SurucuAraci
             {
                 MessageBox.Show(this, mesaj, M("Güncelleme tamamlandı", "Update finished"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Tara(false);
+            });
+        }
+
+        // ---------- Format sonrasi kurulum ----------
+
+        void FormatSonrasiKurulum()
+        {
+            if (!YoneticiOl()) return;
+            if (!Sor(M("Windows yeni kurulduysa bütün sürücüleri tek seferde en yeni resmi sürümlerine getirir:\n\n" +
+                       "1. Windows Update'teki bütün sürücüleri kurar (Ayarlar'da \"isteğe bağlı\" diye gizlenenler dahil; yenileri çıktıkça birkaç tur tekrarlar)\n" +
+                       "2. Intel parçaları varsa Intel'in resmi aracını kurar ve tarama sayfasını açar\n" +
+                       "3. NVIDIA ekran kartı varsa en yeni sürücüyü indirir ve kurulumunu açar\n" +
+                       "4. Bilgisayar üreticinizin sürücü sayfasını açar\n\n" +
+                       "Önce geri yükleme noktası oluşturulur. İnternet hızına göre 10-30 dakika sürebilir; bu sırada bilgisayarı kapatmayın.\n\nBaşlatılsın mı?",
+                       "Brings every driver to its newest official version in one go after a fresh Windows install:\n\n" +
+                       "1. Installs all drivers from Windows Update (including the ones Settings hides as \"optional\"; repeats while new ones appear)\n" +
+                       "2. If you have Intel parts, installs Intel's official tool and opens its scan page\n" +
+                       "3. If you have an NVIDIA card, downloads the newest driver and opens its installer\n" +
+                       "4. Opens your PC maker's driver page\n\n" +
+                       "A restore point is created first. Depending on your connection it can take 10-30 minutes; don't turn off the PC.\n\nStart?"),
+                     MessageBoxIcon.Question)) return;
+
+            Calistir(M("Format sonrası kurulum başlıyor...", "Starting post-install setup..."),
+                () => FormatKurulumu.Calistir(m => BeginInvoke(new Action(() => durum.Text = m)), SonucMetni), r =>
+            {
+                foreach (string adres in r.AcilacakSayfalar)
+                    try { Process.Start(adres); } catch (Exception) { }
+                var metin = new StringBuilder();
+                metin.AppendLine(string.Format(M("Windows Update: {0} sürücü kuruldu{1}.", "Windows Update: {0} drivers installed{1}."), r.Kurulan,
+                    r.Basarisiz > 0 ? string.Format(M(", {0} kurulamadı", ", {0} failed"), r.Basarisiz) : ""));
+                metin.AppendLine();
+                foreach (string s in r.Yapilanlar.Take(25)) metin.AppendLine(s);
+                if (r.Yapilanlar.Count > 25) metin.AppendLine(string.Format(M("... ve {0} satır daha (Geçmiş sekmesinde)", "... and {0} more (see the History tab)"), r.Yapilanlar.Count - 25));
+                if (r.Elle.Count > 0)
+                {
+                    metin.AppendLine();
+                    metin.AppendLine(M("Sizin tamamlamanız gerekenler:", "Left for you to finish:"));
+                    foreach (string s in r.Elle) metin.AppendLine("• " + s);
+                }
+                if (r.YenidenBaslat)
+                {
+                    metin.AppendLine();
+                    metin.AppendLine(M("Bilgisayarı yeniden başlatın, sonra \"Format Sonrası Kurulum\"u bir kez daha çalıştırın: yeniden başlatmadan sonra yeni sürücüler görünebilir.",
+                                       "Restart the PC, then run \"Post-Install Setup\" once more: new drivers can appear after a restart."));
+                }
+                MessageBox.Show(this, metin.ToString(), M("Format sonrası kurulum bitti", "Post-install setup finished"), MessageBoxButtons.OK,
+                    r.Basarisiz > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+
+                // Bir sonraki formatta uretici suruculeri de tek tikla geri gelsin diye yedek onerilir
+                if (Sor(M("Şimdi bütün sürücülerin yedeğini alayım mı?\n\nBir sonraki formattan sonra Bakım > \"Klasörden Yükle\" ile Monster'a özel olanlar dahil bütün sürücüler tek seferde geri gelir. Yedek klasörünü formattan önce bir USB belleğe veya D: sürücüsüne kopyalamayı unutmayın.",
+                          "Back up all drivers now?\n\nAfter your next reinstall, Maintenance > \"Install from Folder\" brings every driver back at once, including the maker-specific ones. Copy the backup folder to a USB drive or D: before reinstalling."),
+                        MessageBoxIcon.Question))
+                {
+                    Calistir(M("Sürücüler yedekleniyor...", "Backing up drivers..."), Sistem.TumunuYedekle, sonuc =>
+                    {
+                        Gecmis.Ekle("yedek", sonuc.Klasor ?? "", "", "", sonuc.Basarili ? M("Tamamlandı", "Completed") : M("Başarısız", "Failed"), sonuc.Basarili);
+                        Bilgi(sonuc.Mesaj, sonuc.Basarili);
+                        Tara(false);
+                    });
+                }
+                else Tara(false);
             });
         }
 
