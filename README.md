@@ -30,6 +30,8 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 - **Arka planda kontrol** – sistem tepsisinde çalışır, günlük veya haftalık kontrol eder, güncelleme bulunca bildirim gösterir
 - **Güncellemeyi gizle** – istemediğiniz bir güncellemeyi gizler; Windows Update de onu otomatik kurmaz
 - **Microsoft Update Kataloğu** – sürücüsü bulunamayan aygıtları donanım kimliğiyle Microsoft'un arşivinde arar
+- **Program güncellemeleri** – Chrome, Discord, Steam gibi kurulu programların güncellemelerini bulur ve tek tıkla kurar (winget)
+- **NVIDIA sürücüsü** – ekran kartınız için NVIDIA'nın en yeni sürücüsünü denetler, resmi kurulum programını indirip imzasını doğrulayarak açar
 - **Üretici kaynakları** – NVIDIA, AMD, Intel ve bilgisayar üreticinizin resmi sayfaları; Intel aracını tek tıkla kurar (winget)
 - **Bakım** – hiçbir aygıtın kullanmadığı eski sürücü sürümlerini bulur ve yedekleyerek temizler
 - **Geri yükleme noktaları** – listeler, yenisini oluşturur, bilgisayarı seçilen noktaya döndürür
@@ -106,7 +108,7 @@ winget paketini güncellemek için `winget/README.md` dosyasına bakın.
 Windows Update, the Microsoft Update Catalog and hardware manufacturers' own sites. No ads, no bundled software,
 no drivers from unknown archives.
 
-**Features:** one-click scan · safe updates with an automatic restore point and driver backup · device repair (restart,
+**Features:** one-click scan · program updates (Chrome, Discord, Steam… via winget) · NVIDIA driver check and install · safe updates with an automatic restore point and driver backup · device repair (restart,
 reinstall driver, enable) · system health (battery, disks, blue screen history) · self-update from GitHub · background checks with
 notifications from the system tray · hide unwanted updates (Windows Update won't install them either) · Microsoft
 Update Catalog search by hardware ID · manufacturer tools (NVIDIA, AMD, Intel, PC maker) · old driver cleanup ·

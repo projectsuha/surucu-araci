@@ -17,7 +17,7 @@ namespace SurucuAraci
         const string ApiAdresi = "https://api.github.com/repos/" + Ortak.Depo + "/releases/latest";
         const string DosyaAdi = "SurucuAraci.exe";
 
-        static WebClient Istemci()
+        internal static WebClient Istemci()
         {
             // .NET Framework varsayilan olarak eski TLS surumlerini kullanabilir; GitHub TLS 1.2 ister
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
