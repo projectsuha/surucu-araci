@@ -18,12 +18,11 @@ namespace SurucuAraci
     static class Ortak
     {
         // Yeni surum yayinlarken bu sayi ile git etiketi (v2.1 gibi) ayni olmalidir; exe'nin dosya surumu de buradan gelir
-        public const string Surum = "2.5";
+        public const string Surum = "2.6";
         public const string Depo = "projectsuha/surucu-araci";
 
-        // Depo gizli oldugu icin program GitHub'a sifresiz erisemez; kendi kendini guncelleme bu yuzden kapali.
-        // Depo herkese acik yapilirsa true yapmak yeterlidir.
-        public static readonly bool KendiniGuncelle = false;
+        // Program yeni surumleri GitHub Releases sayfasindan denetler (depo herkese acik olmalidir)
+        public static readonly bool KendiniGuncelle = true;
         public const string KaldirmaAnahtari = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\SurucuAraci";
         public const string BaslangicAnahtari = @"Software\Microsoft\Windows\CurrentVersion\Run";
         public const string BaslangicDegeri = "SurucuAraci";

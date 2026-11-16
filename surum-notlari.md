@@ -1,5 +1,8 @@
 Yenilikler:
-- Exe dosyalarının Özellikler > Ayrıntılar sekmesinde sürüm, ürün adı, açıklama ve telif bilgisi
-- Görev Yöneticisi'nde program "Sürücü Aracı" adıyla görünür
+- Program yeni sürümleri yeniden kendisi denetler ve tek tıkla güncellenir (Ayarlar > Program)
+- Depo herkese açık; kaynak kodun tamamı GitHub'da
 
-Kurulum: SurucuAraciKurulum.exe (yönetici yetkisi gerekmez)
+What's new:
+- The program checks for new versions itself again and updates with one click (Settings > Program)
+
+Kurulum / Install: SurucuAraciKurulum.exe (yönetici yetkisi gerekmez / no admin rights needed)
