@@ -36,6 +36,7 @@ namespace SurucuAraci
     {
         public string Donanim, Ad, Durum, Adres = "", WingetId;
         public bool Kurulu;
+        public bool Bilgisayar;  // bilgisayar ureticisinin (Monster, Lenovo...) satiri
         public string SimgeAnahtari = "bilgi";
     }
 

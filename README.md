@@ -23,6 +23,7 @@ dağıtır, dizüstü bilgisayarlara bazen yanlış sürücü kurar. Sürücü A
 
 ## Özellikler
 
+- **Format sonrası kurulum** – Windows yeniden kurulunca tek düğmeyle bütün sürücüleri en yeni resmi sürümlerine getirir (Windows Update'in isteğe bağlı sürücüleri, NVIDIA, Intel aracı, üretici sayfası)
 - **Tek tıkla tarama** – sorunlu aygıtlar, güncellemesi olan sürücüler ve tüm aygıtlar tek listede
 - **Güvenli güncelleme** – kurmadan önce otomatik sistem geri yükleme noktası ve eski sürücülerin yedeği
 - **Aygıt onarımı** – sorunlu aygıtı yeniden başlatır, sürücüsünü yeniden yükler veya etkinleştirir
@@ -108,7 +109,7 @@ winget paketini güncellemek için `winget/README.md` dosyasına bakın.
 Windows Update, the Microsoft Update Catalog and hardware manufacturers' own sites. No ads, no bundled software,
 no drivers from unknown archives.
 
-**Features:** one-click scan · program updates (Chrome, Discord, Steam… via winget) · NVIDIA driver check and install · safe updates with an automatic restore point and driver backup · device repair (restart,
+**Features:** one-click post-install setup after reinstalling Windows · one-click scan · program updates (Chrome, Discord, Steam… via winget) · NVIDIA driver check and install · safe updates with an automatic restore point and driver backup · device repair (restart,
 reinstall driver, enable) · system health (battery, disks, blue screen history) · self-update from GitHub · background checks with
 notifications from the system tray · hide unwanted updates (Windows Update won't install them either) · Microsoft
 Update Catalog search by hardware ID · manufacturer tools (NVIDIA, AMD, Intel, PC maker) · old driver cleanup ·

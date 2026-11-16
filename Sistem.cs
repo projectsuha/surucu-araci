@@ -849,6 +849,7 @@ namespace SurucuAraci
             {
                 kaynaklar.Add(new Kaynak
                 {
+                    Bilgisayar = true,
                     Donanim = Dil.M("Bilgisayar: ", "Computer: ") + uretici + " " + model,
                     Ad = eslesen != null ? Dil.M("Üreticinin sürücü sayfası", "Manufacturer's driver page") : Dil.M("Üreticinin destek sitesi", "Manufacturer's support site"),
                     Durum = string.Format(eslesen != null ? Dil.M("Sayfada \"{0}\" modelini arayın", "Search the page for \"{0}\"")

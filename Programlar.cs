@@ -161,7 +161,7 @@ namespace SurucuAraci
 
         // NVIDIA ekran karti yoksa null doner. En yeni surucu, NVIDIA uygulamasinin da sordugu
         // NVIDIA sunucusuna kartin donanim kimligiyle sorulur.
-        static ProgramGuncellemesi NvidiaDenetle()
+        internal static ProgramGuncellemesi NvidiaDenetle()
         {
             string kart = null, aygitNo = null, surum = null;
             using (var arayici = new ManagementObjectSearcher("SELECT Name, PNPDeviceID, DriverVersion FROM Win32_VideoController"))
