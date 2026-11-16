@@ -99,6 +99,11 @@ namespace SurucuAraci
                         int bas = konumlar[c], son = c + 1 < konumlar.Count ? Math.Min(konumlar[c + 1], s.Length) : s.Length;
                         h[c] = bas < s.Length && son > bas ? s.Substring(bas, son - bas).Trim() : "";
                     }
+                    // Ad disindaki sutunlarda bosluk olmaz; parca sayisi tutuyorsa konumdan bagimsiz okunur
+                    // (genis karakterli bir ad sutunlari kaydirsa bile dogru sonuc verir)
+                    string[] parcalar = s.Substring(Math.Min(konumlar[1], s.Length)).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parcalar.Length == konumlar.Count - 1 && s.Length > konumlar[1] && s[konumlar[1] - 1] == ' ')
+                        for (int c = 1; c < konumlar.Count; c++) h[c] = parcalar[c - 1];
                     if (h[1] == "" || h[1].Contains(" ") || h[3] == "") continue;
                     var p = new ProgramGuncellemesi
                     {
