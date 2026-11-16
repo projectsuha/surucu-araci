@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.9.0.schema.json
 
 PackageIdentifier: projectsuha.SurucuAraci
-PackageVersion: "2.5"
+PackageVersion: "2.6"
 PackageLocale: tr-TR
 Publisher: projectsuha
 PackageName: Sürücü Aracı
@@ -11,7 +11,7 @@ Description: |-
   Microsoft Update Kataloğu ve donanım üreticilerinin kendi siteleri. Güncellemeden önce geri yükleme noktası
   oluşturur ve sürücüleri yedekler; sorunlu aygıtları onarır, eski sürücü paketlerini temizler, geri yükleme
   noktalarını yönetir ve sistem sağlığını (pil, diskler, mavi ekran geçmişi) gösterir. Her hafta geri yükleme
-  noktası ve her ay sürücü yedeğini kendiliğinden alır, disk temizliği yapar ve başlangıç programlarını yönetir.
+  noktası ve her ay sürücü yedeğini kendiliğinden alır, kurulu programların ve NVIDIA sürücüsünün güncellemelerini bulur, disk temizliği yapar ve başlangıç programlarını yönetir.
   Reklam ve ek yazılım yoktur.
 Tags:
   - surucu

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 
 PackageIdentifier: projectsuha.SurucuAraci
-PackageVersion: "2.5"
+PackageVersion: "2.6"
 PackageLocale: en-US
 Publisher: projectsuha
 PublisherUrl: https://github.com/projectsuha
@@ -15,7 +15,7 @@ Description: |-
   the Microsoft Update Catalog and hardware manufacturers' own sites. It creates a restore point and backs up
   drivers before updating, can repair problem devices, cleans up old driver packages, manages restore points
   and shows system health (battery, disks, blue screen history). It can also create weekly restore points and
-  monthly driver backups automatically, clean up disk space and manage startup programs. No ads or bundled software.
+  monthly driver backups automatically, finds updates for installed programs and the NVIDIA graphics driver, clean up disk space and manage startup programs. No ads or bundled software.
 Moniker: surucu-araci
 Tags:
   - driver
@@ -23,6 +23,6 @@ Tags:
   - driver-updater
   - windows-update
   - hardware
-ReleaseNotesUrl: https://github.com/projectsuha/surucu-araci/releases/tag/v2.5
+ReleaseNotesUrl: https://github.com/projectsuha/surucu-araci/releases/tag/v2.6
 ManifestType: defaultLocale
 ManifestVersion: 1.9.0
