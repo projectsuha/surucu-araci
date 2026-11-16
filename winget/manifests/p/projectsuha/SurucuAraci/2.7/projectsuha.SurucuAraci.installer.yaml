@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
 
 PackageIdentifier: projectsuha.SurucuAraci
-PackageVersion: "2.6"
+PackageVersion: "2.7"
 InstallerType: exe
 Scope: user
 InstallModes:
@@ -14,7 +14,7 @@ UpgradeBehavior: install
 ProductCode: SurucuAraci
 Installers:
   - Architecture: neutral
-    InstallerUrl: https://github.com/projectsuha/surucu-araci/releases/download/v2.6/SurucuAraciKurulum.exe
-    InstallerSha256: 209E52477E1E955C568A0CC36AC16C9223413268C1C354432CC3C65377ACFE7C
+    InstallerUrl: https://github.com/projectsuha/surucu-araci/releases/download/v2.7/SurucuAraciKurulum.exe
+    InstallerSha256: ACB9299A03C0E73B69557522D142C82562BD056D412BEA7C0B5FA8F516D08CF3
 ManifestType: installer
 ManifestVersion: 1.9.0
