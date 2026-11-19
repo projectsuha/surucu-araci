@@ -35,6 +35,7 @@ namespace SurucuAraci
                 : M("• Geri yükleme noktası oluşturulamadı (Sistem Koruması kapalı olabilir)", "• Couldn't create a restore point (System Protection may be off)"));
 
             WindowsUpdate(r, ilerleme, sonucMetni);
+            EkKaynaklar(r, ilerleme);
 
             List<Kaynak> kaynaklar;
             try { kaynaklar = Sistem.UreticiKaynaklari(); }
@@ -94,6 +95,46 @@ namespace SurucuAraci
                 }
             }
             if (denenen.Count == 0) r.Yapilanlar.Add(M("✓ Windows Update'te kurulacak yeni sürücü yok", "✓ No new drivers on Windows Update"));
+        }
+
+        // Windows Update'in sunmadigi daha yeni suruculer: Microsoft Katalogu (aygit kimligiyle) ve USB/diskteki surucu yedekleri
+        static void EkKaynaklar(FormatSonucu r, Action<string> ilerleme)
+        {
+            List<Aygit> aygitlar;
+            try
+            {
+                ilerleme(M("Aygıtlar taranıyor...", "Scanning devices..."));
+                aygitlar = Sistem.AygitlariTara();
+            }
+            catch (Exception h)
+            {
+                r.Yapilanlar.Add(M("✗ Aygıtlar taranamadı: ", "✗ Couldn't scan devices: ") + h.Message);
+                return;
+            }
+            Tuple<List<Guncelleme>, string> ek = AnaForm.EkKaynaklariAra(aygitlar, ilerleme);
+            if (ek.Item2 != null) r.Yapilanlar.Add("✗ " + ek.Item2);
+            Katalog.Birlestir(aygitlar, ek.Item1);
+            List<Aygit> kurulacaklar = aygitlar.Where(a => a.Guncelleme != null).ToList();
+            if (kurulacaklar.Count == 0)
+            {
+                if (ek.Item2 == null) r.Yapilanlar.Add(M("✓ Microsoft Kataloğu'nda ve sürücü yedeklerinde daha yeni sürücü yok", "✓ No newer drivers in the Microsoft Catalog or driver backups"));
+                return;
+            }
+
+            ilerleme(M("Değişecek sürücüler yedekleniyor...", "Backing up the drivers being replaced..."));
+            string yedek = Sistem.SecilenleriYedekle(kurulacaklar.Select(a => a.InfAdi), M(" format sonrası kurulum öncesi", " before post-install setup"));
+            if (yedek != null) r.Yapilanlar.Add(M("✓ Değişecek sürücülerin yedeği: ", "✓ Backup of the drivers being replaced: ") + yedek);
+
+            foreach (Aygit a in kurulacaklar)
+            {
+                IslemSonucu s;
+                try { s = AnaForm.EkGuncellemeKur(a.Guncelleme, ilerleme); }
+                catch (Exception h) { s = new IslemSonucu { Mesaj = h.Message }; }
+                Gecmis.Ekle("guncelleme", a.Ad, a.Surum, a.Guncelleme.Baslik, s.Mesaj, s.Basarili);
+                if (s.Basarili) r.Kurulan++; else r.Basarisiz++;
+                r.YenidenBaslat |= s.YenidenBaslat;
+                r.Yapilanlar.Add((s.Basarili ? "✓ " : "✗ ") + a.Ad + " " + a.Guncelleme.Surum + ": " + s.Mesaj);
+            }
         }
 
         static void Intel(FormatSonucu r, List<Kaynak> kaynaklar, Action<string> ilerleme)

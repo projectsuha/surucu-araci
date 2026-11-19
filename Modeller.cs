@@ -5,11 +5,23 @@ namespace SurucuAraci
 {
     enum Durum { Sorunlu, GuncellemeVar, Guncel }
 
+    // Guncellemenin geldigi yer
+    enum GuncellemeKaynagi { WindowsUpdate, Katalog, Yedek }
+
     class Guncelleme
     {
         public string Id, Baslik, DonanimKimligi, Model, Sinif;
         public DateTime Tarih = DateTime.MinValue;
         public decimal Boyut;
+        public GuncellemeKaynagi Kaynak = GuncellemeKaynagi.WindowsUpdate;
+        public string Surum = "";          // yeni surucunun surumu (Windows Update'te bilinmez)
+        public string Yayinci = "";        // Katalog: paketi yayimlayan sirket
+        public string AygitKimligi = "";   // Katalog/Yedek: guncellemenin bulundugu aygit
+        public string KurulumKimligi = ""; // Katalog: aygitla paketin ortak donanim kimligi
+        public bool Genel;                 // Katalog: bilgisayara ozel surucunun yerine cip ureticisinin genel surucusu
+        public bool Zorla;                 // Katalog: Windows kendiliginden secmeyecegi icin zorla kurulur
+        public string InfYolu = "";        // Yedek: kurulacak .inf dosyasi
+        public string MevcutSurum = "";    // Yedek: ayni paketin bilgisayardaki surumu (aygita baglanamayan satirlar icin)
     }
 
     class Aygit
@@ -17,6 +29,8 @@ namespace SurucuAraci
         public string Ad = "", Sinif = "", Uretici = "", Surum = "", InfAdi = "", Kimlik = "";
         public DateTime Tarih = DateTime.MinValue;
         public string[] DonanimKimlikleri = new string[0];
+        public string[] UyumluKimlikler = new string[0];
+        public string EslesenKimlik = "";  // kurulu surucunun aygitla eslestigi kimlik (ne kadar ozel oldugunu gosterir)
         public uint HataKodu;
         public Guncelleme Guncelleme;
         public bool Secili = true;  // "Guncelle" butonu icin isaretli mi
@@ -117,7 +131,7 @@ namespace SurucuAraci
 
     class IslemSonucu
     {
-        public bool Basarili;
+        public bool Basarili, YenidenBaslat;
         public string Mesaj = "";
         public string Klasor;
     }
