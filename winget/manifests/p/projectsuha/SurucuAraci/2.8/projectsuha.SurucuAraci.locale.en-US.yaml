@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 
 PackageIdentifier: projectsuha.SurucuAraci
-PackageVersion: "2.7"
+PackageVersion: "2.8"
 PackageLocale: en-US
 Publisher: projectsuha
 PublisherUrl: https://github.com/projectsuha
@@ -23,6 +23,6 @@ Tags:
   - driver-updater
   - windows-update
   - hardware
-ReleaseNotesUrl: https://github.com/projectsuha/surucu-araci/releases/tag/v2.7
+ReleaseNotesUrl: https://github.com/projectsuha/surucu-araci/releases/tag/v2.8
 ManifestType: defaultLocale
 ManifestVersion: 1.9.0
