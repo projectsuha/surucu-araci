@@ -22,8 +22,22 @@ namespace SurucuAraci
     static class Sistem
     {
         const string Sorgu = "IsInstalled=0 and Type='Driver' and IsHidden=0";
-        public static readonly string YedekKlasoru =
+        // Belgeler OneDrive'a tasinmissa (Windows 11'de varsayilan) birkac GB'lik yedek OneDrive kotasini doldurur ve
+        // surekli esitlenir; o zaman yedekler esitlenmeyen kullanici klasorune (C:\Users\ad\Sürücü Yedekleri) alinir
+        public static readonly string YedekKlasoru = YedekKlasorunuBelirle();
+        public static readonly string EskiYedekKlasoru =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sürücü Yedekleri");
+
+        static string YedekKlasorunuBelirle()
+        {
+            string belgeler = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            bool oneDrive = new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" }
+                .Select(Environment.GetEnvironmentVariable)
+                .Any(k => !string.IsNullOrEmpty(k) && belgeler.StartsWith(k.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase));
+            return oneDrive
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Sürücü Yedekleri")
+                : Path.Combine(belgeler, "Sürücü Yedekleri");
+        }
         static readonly string PnpUtil = Path.Combine(Environment.SystemDirectory, "pnputil.exe");
 
         public static bool YoneticiMi()
@@ -61,7 +75,7 @@ namespace SurucuAraci
         {
             var suruculer = new Dictionary<string, ManagementBaseObject>(StringComparer.OrdinalIgnoreCase);
             using (var arayici = new ManagementObjectSearcher(
-                "SELECT DeviceID, DeviceName, DeviceClass, Manufacturer, DriverVersion, DriverDate, InfName FROM Win32_PnPSignedDriver"))
+                "SELECT DeviceID, DeviceName, DeviceClass, Manufacturer, DriverVersion, DriverDate, InfName, HardWareID FROM Win32_PnPSignedDriver"))
             {
                 foreach (ManagementObject m in arayici.Get())
                 {
@@ -73,7 +87,7 @@ namespace SurucuAraci
             var aygitlar = new List<Aygit>();
             // 45 = aygit su an bagli degil
             using (var arayici = new ManagementObjectSearcher(
-                "SELECT DeviceID, Name, PNPClass, HardwareID, ConfigManagerErrorCode FROM Win32_PnPEntity WHERE ConfigManagerErrorCode <> 45"))
+                "SELECT DeviceID, Name, PNPClass, HardwareID, CompatibleID, ConfigManagerErrorCode FROM Win32_PnPEntity WHERE ConfigManagerErrorCode <> 45"))
             {
                 foreach (ManagementObject m in arayici.Get())
                 {
@@ -88,7 +102,8 @@ namespace SurucuAraci
                     {
                         Kimlik = kimlik,
                         HataKodu = kod,
-                        DonanimKimlikleri = (m["HardwareID"] as string[]) ?? new string[0]
+                        DonanimKimlikleri = (m["HardwareID"] as string[]) ?? new string[0],
+                        UyumluKimlikler = (m["CompatibleID"] as string[]) ?? new string[0]
                     };
                     a.Ad = s != null && Metin(s, "DeviceName") != "" ? Metin(s, "DeviceName") : Metin(m, "Name");
                     if (a.Ad == "") a.Ad = kimlik;
@@ -98,6 +113,7 @@ namespace SurucuAraci
                         a.Uretici = Metin(s, "Manufacturer");
                         a.Surum = Metin(s, "DriverVersion");
                         a.InfAdi = Metin(s, "InfName");
+                        a.EslesenKimlik = Metin(s, "HardWareID");
                         string ham = Metin(s, "DriverDate");
                         if (ham != "") a.Tarih = Oku(() => ManagementDateTimeConverter.ToDateTime(ham), DateTime.MinValue);
                     }
@@ -333,12 +349,12 @@ namespace SurucuAraci
             }
         }
 
-        static KomutSonucu PnpUtilCalistir(string argumanlar)
+        internal static KomutSonucu PnpUtilCalistir(string argumanlar)
         {
             return Komut(PnpUtil, argumanlar, Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage));
         }
 
-        static string SonSatirlar(string metin, int adet)
+        internal static string SonSatirlar(string metin, int adet)
         {
             string[] satirlar = metin.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             return string.Join("\n", satirlar.Skip(Math.Max(0, satirlar.Length - adet)));
@@ -413,6 +429,7 @@ namespace SurucuAraci
             return new IslemSonucu
             {
                 Basarili = basarili,
+                YenidenBaslat = k.Kod == 3010,
                 Mesaj = (basarili ? Dil.M("Sürücüler yüklendi.", "Drivers installed.")
                         : Dil.M("Bazı sürücüler yüklenemedi veya bilgisayardakiler zaten daha yeni.", "Some drivers couldn't be installed, or the ones on this PC are already newer."))
                     + (k.Kod == 3010 ? Dil.M("\nDeğişikliklerin etkili olması için bilgisayarı yeniden başlatın.", "\nRestart the PC for the changes to take effect.") : "")

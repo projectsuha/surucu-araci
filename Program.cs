@@ -1,6 +1,7 @@
 // Program.cs - Baslangic noktasi: tek kopya calisma, sistem tepsisinde baslama ve kaldirma
 //   /tepsi   Windows acilisinda pencere acmadan sistem tepsisinde baslar
 //   /devral  Calisan kopyanin kapanmasini bekleyip yerine gecer (yonetici olarak yeniden baslatma)
+//   /devam:<islem>  /devral ile birlikte: acilista kullanicinin bastigi islemi surdurur (format, yedek)
 //   /otomatik-koruma  Zamanlanmis gorevin calistirdigi mod: pencere acmadan geri yukleme noktasi ve surucu yedegi
 //   /kaldir  Programi kaldirir (Ayarlar > Uygulamalar listesinden cagrilir); /sessiz ile soru sormadan
 using System;
@@ -53,6 +54,8 @@ namespace SurucuAraci
             if (!TekKopya.Baslat(secenekler.Contains("/devral"), !gizli)) return;
 
             var form = new AnaForm();
+            string devam = secenekler.FirstOrDefault(a => a.StartsWith("/devam:"));
+            if (devam != null && !gizli) form.DevamIslemi = devam.Substring("/devam:".Length);
             Application.Run(new UygulamaBaglami(form, gizli));
             TekKopya.Birak();
         }
@@ -177,8 +180,8 @@ namespace SurucuAraci
                 try { File.Delete(kisayol); } catch (Exception) { }
             }
 
-            if (!sessiz && MessageBox.Show(Dil.M("Ayarlar ve işlem geçmişi de silinsin mi?\n\n(Belgeler klasöründeki sürücü yedekleri silinmez.)",
-                                      "Also delete the settings and action history?\n\n(Driver backups in your Documents folder are kept.)"),
+            if (!sessiz && MessageBox.Show(Dil.M("Ayarlar ve işlem geçmişi de silinsin mi?\n\n(\"Sürücü Yedekleri\" klasöründeki sürücü yedekleri silinmez.)",
+                                      "Also delete the settings and action history?\n\n(Driver backups in the \"Sürücü Yedekleri\" folder are kept.)"),
                     Ortak.Ad, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 try { Directory.Delete(Ortak.VeriKlasoru, true); } catch (Exception) { }

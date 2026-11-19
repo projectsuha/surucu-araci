@@ -273,6 +273,27 @@ namespace SurucuAraci
             base.OnKeyUp(e);
         }
 
+        // Ekran okuyucular ve otomasyon araclari dugmeye "basabilsin" (UIA Invoke)
+        protected override AccessibleObject CreateAccessibilityInstance() { return new DugmeErisimi(this); }
+
+        class DugmeErisimi : ControlAccessibleObject
+        {
+            readonly Dugme dugme;
+            public DugmeErisimi(Dugme d) : base(d) { dugme = d; }
+            public override string DefaultAction
+            {
+                get { return dugme.tur == DugmeTuru.Sekme ? Dil.M("Seç", "Select") : Dil.M("Bas", "Press"); }
+            }
+            public override AccessibleStates State
+            {
+                get { return base.State | (dugme.Enabled ? 0 : AccessibleStates.Unavailable) | (dugme.secili ? AccessibleStates.Selected : 0); }
+            }
+            public override void DoDefaultAction()
+            {
+                if (dugme.Enabled) dugme.BeginInvoke(new Action(() => dugme.OnClick(EventArgs.Empty)));
+            }
+        }
+
         void Renkler(out Color zemin, out Color kenar, out Color yazi, out Color ikon)
         {
             Color soluk = Color.FromArgb(140, 160, 184);
