@@ -18,7 +18,7 @@ namespace SurucuAraci
     static class Ortak
     {
         // Yeni surum yayinlarken bu sayi ile git etiketi (v2.1 gibi) ayni olmalidir; exe'nin dosya surumu de buradan gelir
-        public const string Surum = "2.8";
+        public const string Surum = "2.9";
         public const string Depo = "projectsuha/surucu-araci";
 
         // Program yeni surumleri GitHub Releases sayfasindan denetler (depo herkese acik olmalidir)

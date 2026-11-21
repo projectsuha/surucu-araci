@@ -73,7 +73,7 @@ namespace SurucuAraci
                 Margin = new Padding(0, O(2), 0, O(16))
             });
             masaustu = Onay(govde, M("Masaüstüne kısayol oluştur", "Create a desktop shortcut"), true);
-            baslangic = Onay(govde, M("Windows açılınca sistem tepsisinde başlat", "Start in the system tray when Windows starts"), false);
+            baslangic = Onay(govde, M("Windows açılınca sistem tepsisinde başlat", "Start in the system tray when Windows starts"), BaslangictaAcik());
             calistir = Onay(govde, M("Kurulum bitince programı aç", "Open the program when setup finishes"), true);
 
             var butonlar = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(O(20), O(10), O(20), O(18)), BackColor = Tema.Zemin };
@@ -144,7 +144,7 @@ namespace SurucuAraci
         }
 
         // Calisan programi kapatir, dosyayi kopyalar, kisayollari ve Uygulamalar kaydini olusturur; kurulan exe'nin yolunu doner
-        public static string KurulumYap(bool masaustuKisayolu, bool windowsIleBaslat)
+        public static string KurulumYap(bool masaustuKisayolu, bool? windowsIleBaslat)
         {
             foreach (Process p in Process.GetProcessesByName("SurucuAraci"))
             {
@@ -190,12 +190,25 @@ namespace SurucuAraci
                 k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
             }
 
+            // null: mevcut ayar korunur (sessiz kurulum / winget guncellemesi); acik ise yol yenilenir
             using (RegistryKey k = Registry.CurrentUser.CreateSubKey(Ortak.BaslangicAnahtari))
             {
-                if (windowsIleBaslat) k.SetValue(Ortak.BaslangicDegeri, "\"" + hedef + "\" /tepsi");
+                bool ac = windowsIleBaslat ?? (k.GetValue(Ortak.BaslangicDegeri) != null);
+                if (ac) k.SetValue(Ortak.BaslangicDegeri, "\"" + hedef + "\" /tepsi");
                 else k.DeleteValue(Ortak.BaslangicDegeri, false);
             }
             return hedef;
+        }
+
+        // Onceki kurulumda "Windows ile baslat" acik mi
+        static bool BaslangictaAcik()
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(Ortak.BaslangicAnahtari))
+                    return k != null && k.GetValue(Ortak.BaslangicDegeri) != null;
+            }
+            catch (Exception) { return false; }
         }
     }
 
@@ -213,7 +226,7 @@ namespace SurucuAraci
             {
                 try
                 {
-                    KurulumFormu.KurulumYap(false, false);
+                    KurulumFormu.KurulumYap(false, null);
                     return 0;
                 }
                 catch (Exception)
